@@ -5,7 +5,7 @@
 #include "librabbitmq/amqp.h"
 #include "librabbitmq/amqp_framing.h"
 
-typedef amqp_connection_state_t Net__RabbitMQ__Connection;
+typedef amqp_connection_state_t Net__RabbitMQ;
 
 #define int_from_hv(hv,name) \
  do { SV **v; if(NULL != (v = hv_fetch(hv, #name, strlen(#name), 0))) name = SvIV(*v); } while(0)
@@ -58,14 +58,14 @@ void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
   }
 }
 
-MODULE = Net::RabbitMQ::Connection PACKAGE = Net::RabbitMQ::Connection PREFIX = net_rabbitmq_c_
+MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
 
 REQUIRE:        1.9505
 PROTOTYPES:     DISABLE
 
 int
-net_rabbitmq_c_connect(conn, hostname, options)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_connect(conn, hostname, options)
+  Net::RabbitMQ conn
   char *hostname
   HV *options
   PREINIT:
@@ -96,23 +96,23 @@ net_rabbitmq_c_connect(conn, hostname, options)
     RETVAL
 
 void
-net_rabbitmq_c_channel_open(conn, channel)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_channel_open(conn, channel)
+  Net::RabbitMQ conn
   int channel
   CODE:
     amqp_channel_open(conn, channel);
     die_on_amqp_error(aTHX_ amqp_rpc_reply, "Opening channel");
 
 void
-net_rabbitmq_c_channel_close(conn, channel)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_channel_close(conn, channel)
+  Net::RabbitMQ conn
   int channel
   CODE:
     die_on_amqp_error(aTHX_ amqp_channel_close(conn, channel, AMQP_REPLY_SUCCESS), "Closing channel");
 
 void
-net_rabbitmq_c_exchange_declare(conn, channel, exchange, options = NULL, args = NULL)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_exchange_declare(conn, channel, exchange, options = NULL, args = NULL)
+  Net::RabbitMQ conn
   int channel
   char *exchange
   HV *options
@@ -135,8 +135,8 @@ net_rabbitmq_c_exchange_declare(conn, channel, exchange, options = NULL, args = 
     die_on_amqp_error(aTHX_ amqp_rpc_reply, "Declaring exchange");
 
 SV *
-net_rabbitmq_c_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
+  Net::RabbitMQ conn
   int channel
   char *queuename
   HV *options
@@ -165,8 +165,8 @@ net_rabbitmq_c_queue_declare(conn, channel, queuename, options = NULL, args = NU
     RETVAL
 
 void
-net_rabbitmq_c_queue_bind(conn, channel, queuename, exchange, bindingkey, args = NULL)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = NULL)
+  Net::RabbitMQ conn
   int channel
   char *queuename
   char *exchange
@@ -184,8 +184,8 @@ net_rabbitmq_c_queue_bind(conn, channel, queuename, exchange, bindingkey, args =
     die_on_amqp_error(aTHX_ amqp_rpc_reply, "Binding queue");
 
 void
-net_rabbitmq_c_queue_unbind(conn, channel, queuename, exchange, bindingkey, args = NULL)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args = NULL)
+  Net::RabbitMQ conn
   int channel
   char *queuename
   char *exchange
@@ -203,17 +203,24 @@ net_rabbitmq_c_queue_unbind(conn, channel, queuename, exchange, bindingkey, args
     die_on_amqp_error(aTHX_ amqp_rpc_reply, "Unbinding queue");
 
 SV *
-net_rabbitmq_c_consume(conn, channel, queuename, consumer_tag = NULL, no_local = 0, no_ack = 1, exclusive = 0)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_consume(conn, channel, queuename, options = NULL)
+  Net::RabbitMQ conn
   int channel
   char *queuename
-  char *consumer_tag
-  int no_local
-  int no_ack
-  int exclusive
+  HV *options
   PREINIT:
     amqp_basic_consume_ok_t *r;
+    char *consumer_tag = NULL;
+    int no_local = 0;
+    int no_ack = 1;
+    int exclusive = 0;
   CODE:
+    if(options) {
+      str_from_hv(options, consumer_tag);
+      int_from_hv(options, no_local);
+      int_from_hv(options, no_ack);
+      int_from_hv(options, exclusive);
+    }
     r = amqp_basic_consume(conn, channel, amqp_cstring_bytes(queuename),
                            consumer_tag ? amqp_cstring_bytes(consumer_tag) : AMQP_EMPTY_BYTES,
                            no_local, no_ack, exclusive);
@@ -223,8 +230,8 @@ net_rabbitmq_c_consume(conn, channel, queuename, consumer_tag = NULL, no_local =
     RETVAL
 
 HV *
-net_rabbitmq_c_recv(conn)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_recv(conn)
+  Net::RabbitMQ conn
   PREINIT:
     amqp_frame_t frame;
     int result = 0;
@@ -243,7 +250,7 @@ net_rabbitmq_c_recv(conn)
       if (frame.payload.method.id != AMQP_BASIC_DELIVER_METHOD) continue;
 
       d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
-      hv_store(RETVAL, "delivery_tag", strlen("delivery_tag"), newSViv(d->delivery_tag), 0);
+      hv_store(RETVAL, "delivery_tag", strlen("delivery_tag"), newSVpvn((const char *)&d->delivery_tag, sizeof(d->delivery_tag)), 0);
       hv_store(RETVAL, "exchange", strlen("exchange"), newSVpvn(d->exchange.bytes, d->exchange.len), 0);
       hv_store(RETVAL, "routing_key", strlen("routing_key"), newSVpvn(d->routing_key.bytes, d->routing_key.len), 0);
 
@@ -289,9 +296,36 @@ net_rabbitmq_c_recv(conn)
   OUTPUT:
     RETVAL
 
+void
+net_rabbitmq_ack(conn, channel, delivery_tag, multiple = 0)
+  Net::RabbitMQ conn
+  int channel
+  SV *delivery_tag
+  int multiple
+  PREINIT:
+    STRLEN len;
+    uint64_t tag;
+    unsigned char *l;
+  CODE:
+    l = SvPV(delivery_tag, len);
+    if(len != sizeof(tag)) Perl_croak(aTHX_ "bad tag");
+    memcpy(&tag, l, sizeof(tag));
+    die_on_error(aTHX_ amqp_basic_ack(conn, channel, tag, multiple),
+                 "ack");
+
+void
+net_rabbitmq_purge(conn, channel, queuename, no_wait = 0)
+  Net::RabbitMQ conn
+  int channel
+  char *queuename
+  int no_wait
+  CODE:
+    amqp_queue_purge(conn, channel, amqp_cstring_bytes(queuename), no_wait);
+    die_on_amqp_error(aTHX_ amqp_rpc_reply, "Purging queue");
+
 int
-net_rabbitmq_c_publish(conn, channel, routing_key, body, options = NULL, props = NULL)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = NULL)
+  Net::RabbitMQ conn
   int channel
   HV *options;
   char *routing_key
@@ -324,44 +358,31 @@ net_rabbitmq_c_publish(conn, channel, routing_key, body, options = NULL, props =
     RETVAL
 
 int
-net_rabbitmq_c_get_channel_max(conn)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_get_channel_max(conn)
+  Net::RabbitMQ conn
   CODE:
     RETVAL = amqp_get_channel_max(conn);
   OUTPUT:
     RETVAL
 
 void
-net_rabbitmq_c_disconnect(conn)
-  Net::RabbitMQ::Connection conn
+net_rabbitmq_disconnect(conn)
+  Net::RabbitMQ conn
   CODE:
     die_on_amqp_error(aTHX_ amqp_connection_close(conn, AMQP_REPLY_SUCCESS), "Closing connection");
 
-void
-net_rabbitmq_c_DESTROY(conn)
-  Net::RabbitMQ::Connection conn
-  CODE:
-    amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
-
-MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
-
-REQUIRE:        1.9505
-PROTOTYPES:     DISABLE
-
-Net::RabbitMQ::Connection
+Net::RabbitMQ
 net_rabbitmq_new(clazz)
   char *clazz
-  PREINIT:
-    Net__RabbitMQ__Connection conn;
   CODE:
-    conn = amqp_new_connection();
-    RETVAL = conn;
+    RETVAL = amqp_new_connection();
   OUTPUT:
     RETVAL
 
 void
 net_rabbitmq_DESTROY(obj)
-  Net::RabbitMQ::Connection obj
+  Net::RabbitMQ obj
   CODE:
+    amqp_connection_close(obj, AMQP_REPLY_SUCCESS);
     amqp_destroy_connection(obj);
 

@@ -8,7 +8,7 @@ use_ok('Net::RabbitMQ');
 my $mq = Net::RabbitMQ->new();
 ok($mq);
 
-eval { $mq->connect($host, { user => "guest", pass => "guest" }); };
+eval { $mq->connect($host, { user => "guest", password => "guest" }); };
 is($@, '', "connect");
 eval { $mq->channel_open(1); };
 is($@, '', "channel_open");
@@ -29,7 +29,7 @@ is_deeply($rv,
           {
           'body' => 'Magic Transient Payload',
           'routing_key' => 'nr_test_q',
-          'delivery_tag' => 1,
+          'delivery_tag' => pack('Q', 1),
           'exchange' => 'nr_test_x'
           }, "payload");
 
