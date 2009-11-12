@@ -7,6 +7,11 @@
 
 typedef amqp_connection_state_t Net__RabbitMQ__Connection;
 
+#define int_from_hv(hv,name) \
+ do { SV **v; if(NULL != (v = hv_fetch(hv, #name, strlen(#name), 0))) name = SvIV(*v); } while(0)
+#define str_from_hv(hv,name) \
+ do { SV **v; if(NULL != (v = hv_fetch(hv, #name, strlen(#name), 0))) name = SvPV_nolen(*v); } while(0)
+
 void die_on_error(pTHX_ int x, char const *context) {
   if (x < 0) {
     Perl_croak(aTHX_ "%s: %s\n", context, strerror(-x));
@@ -66,25 +71,25 @@ net_rabbitmq_c_connect(conn, hostname, options)
   PREINIT:
     int sockfd;
     char *user = "guest";
-    char *pass = "guest";
+    char *password = "guest";
     char *vhost = "/";
     int port = 5672;
     int channel_max = 0;
     int frame_max = 131072;
     int heartbeat = 0;
-    SV **v;
   CODE:
     die_on_error(aTHX_ sockfd = amqp_open_socket(hostname, port), "Opening socket");
     amqp_set_sockfd(conn, sockfd);
-    if(NULL != (v = hv_fetch(options, "user", strlen("user"), 0))) user = SvPV_nolen(*v);
-    if(NULL != (v = hv_fetch(options, "pass", strlen("pass"), 0))) pass = SvPV_nolen(*v);
-    if(NULL != (v = hv_fetch(options, "password", strlen("password"), 0))) pass = SvPV_nolen(*v);
-    if(NULL != (v = hv_fetch(options, "vhost", strlen("vhost"), 0))) vhost = SvPV_nolen(*v);
-    if(NULL != (v = hv_fetch(options, "channel_max", strlen("channel_max"), 0))) channel_max = SvIV(*v);
-    if(NULL != (v = hv_fetch(options, "frame_max", strlen("frame_max"), 0))) frame_max = SvIV(*v);
-    if(NULL != (v = hv_fetch(options, "heartbeat", strlen("heartbeat"), 0))) heartbeat = SvIV(*v);
-    if(NULL != (v = hv_fetch(options, "port", strlen("port"), 0))) port = SvIV(*v);
-    die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max, heartbeat, AMQP_SASL_METHOD_PLAIN, user, pass),
+    str_from_hv(options, user);
+    str_from_hv(options, password);
+    str_from_hv(options, vhost);
+    int_from_hv(options, channel_max);
+    int_from_hv(options, frame_max);
+    int_from_hv(options, heartbeat);
+    int_from_hv(options, port);
+    die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max,
+                                       heartbeat, AMQP_SASL_METHOD_PLAIN,
+                                       user, password),
                       "Logging in");
     RETVAL = sockfd;
   OUTPUT:
@@ -106,37 +111,51 @@ net_rabbitmq_c_channel_close(conn, channel)
     die_on_amqp_error(aTHX_ amqp_channel_close(conn, channel, AMQP_REPLY_SUCCESS), "Closing channel");
 
 void
-net_rabbitmq_c_exchange_declare(conn, channel, exchange, exchange_type, passive, durable, auto_delete, args = NULL)
+net_rabbitmq_c_exchange_declare(conn, channel, exchange, options = NULL, args = NULL)
   Net::RabbitMQ::Connection conn
   int channel
   char *exchange
-  char *exchange_type
-  int passive
-  int durable
-  int auto_delete
+  HV *options
   HV *args
   PREINIT:
+    char *exchange_type = "direct";
+    int passive = 0;
+    int durable = 0;
+    int auto_delete = 1;
     amqp_table_t arguments = AMQP_EMPTY_TABLE;
   CODE:
+    if(options) {
+      str_from_hv(options, exchange_type);
+      int_from_hv(options, passive);
+      int_from_hv(options, durable);
+      int_from_hv(options, auto_delete);
+    }
     amqp_exchange_declare(conn, channel, amqp_cstring_bytes(exchange), amqp_cstring_bytes(exchange_type),
                           passive, durable, auto_delete, arguments);
     die_on_amqp_error(aTHX_ amqp_rpc_reply, "Declaring exchange");
 
 SV *
-net_rabbitmq_c_queue_declare(conn, channel, queuename, passive, durable, exclusive, auto_delete, args = NULL)
+net_rabbitmq_c_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
   Net::RabbitMQ::Connection conn
   int channel
   char *queuename
-  int passive
-  int durable
-  int exclusive
-  int auto_delete
+  HV *options
   HV *args
   PREINIT:
+    int passive = 0;
+    int durable = 0;
+    int exclusive = 0;
+    int auto_delete = 1;
     amqp_table_t arguments = AMQP_EMPTY_TABLE;
     amqp_bytes_t queuename_b = AMQP_EMPTY_BYTES;
   CODE:
     if(queuename && strcmp(queuename, "")) queuename_b = amqp_cstring_bytes(queuename);
+    if(options) {
+      int_from_hv(options, passive);
+      int_from_hv(options, durable);
+      int_from_hv(options, exclusive);
+      int_from_hv(options, auto_delete);
+    }
     amqp_queue_declare_ok_t *r = amqp_queue_declare(conn, channel, queuename_b, passive,
                                                     durable, exclusive, auto_delete,
                                                     arguments);

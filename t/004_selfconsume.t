@@ -13,7 +13,7 @@ is($@, '', "connect");
 eval { $mq->channel_open(1); };
 is($@, '', "channel_open");
 my $queuename = '';
-eval { $queuename = $mq->queue_declare(1, '', 0, 1, 0, 1); };
+eval { $queuename = $mq->queue_declare(1, '', { passive => 0, durable => 1, exclusive => 0, auto_delete => 1 }); };
 is($@, '', "queue_declare");
 isnt($queuename, '', "queue_declare -> private name");
 eval { $mq->queue_bind(1, $queuename, "nr_test_x", "nr_test_q"); };
