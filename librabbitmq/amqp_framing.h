@@ -126,6 +126,7 @@ typedef struct amqp_connection_close_t_ {
 
 #define AMQP_CONNECTION_CLOSE_OK_METHOD ((amqp_method_number_t) 0x000A003D) /* 10, 61; 655421 */
 typedef struct amqp_connection_close_ok_t_ {
+  unsigned unused:1;
 } amqp_connection_close_ok_t;
 
 #define AMQP_CHANNEL_OPEN_METHOD ((amqp_method_number_t) 0x0014000A) /* 20, 10; 1310730 */
@@ -135,6 +136,7 @@ typedef struct amqp_channel_open_t_ {
 
 #define AMQP_CHANNEL_OPEN_OK_METHOD ((amqp_method_number_t) 0x0014000B) /* 20, 11; 1310731 */
 typedef struct amqp_channel_open_ok_t_ {
+  unsigned unused:1;
 } amqp_channel_open_ok_t;
 
 #define AMQP_CHANNEL_FLOW_METHOD ((amqp_method_number_t) 0x00140014) /* 20, 20; 1310740 */
@@ -164,6 +166,7 @@ typedef struct amqp_channel_close_t_ {
 
 #define AMQP_CHANNEL_CLOSE_OK_METHOD ((amqp_method_number_t) 0x00140029) /* 20, 41; 1310761 */
 typedef struct amqp_channel_close_ok_t_ {
+  unsigned unused:1;
 } amqp_channel_close_ok_t;
 
 #define AMQP_ACCESS_REQUEST_METHOD ((amqp_method_number_t) 0x001E000A) /* 30, 10; 1966090 */
@@ -196,6 +199,7 @@ typedef struct amqp_exchange_declare_t_ {
 
 #define AMQP_EXCHANGE_DECLARE_OK_METHOD ((amqp_method_number_t) 0x0028000B) /* 40, 11; 2621451 */
 typedef struct amqp_exchange_declare_ok_t_ {
+  unsigned unused:1;
 } amqp_exchange_declare_ok_t;
 
 #define AMQP_EXCHANGE_DELETE_METHOD ((amqp_method_number_t) 0x00280014) /* 40, 20; 2621460 */
@@ -208,6 +212,7 @@ typedef struct amqp_exchange_delete_t_ {
 
 #define AMQP_EXCHANGE_DELETE_OK_METHOD ((amqp_method_number_t) 0x00280015) /* 40, 21; 2621461 */
 typedef struct amqp_exchange_delete_ok_t_ {
+  unsigned unused:1;
 } amqp_exchange_delete_ok_t;
 
 #define AMQP_QUEUE_DECLARE_METHOD ((amqp_method_number_t) 0x0032000A) /* 50, 10; 3276810 */
@@ -241,6 +246,7 @@ typedef struct amqp_queue_bind_t_ {
 
 #define AMQP_QUEUE_BIND_OK_METHOD ((amqp_method_number_t) 0x00320015) /* 50, 21; 3276821 */
 typedef struct amqp_queue_bind_ok_t_ {
+  unsigned unused:1;
 } amqp_queue_bind_ok_t;
 
 #define AMQP_QUEUE_PURGE_METHOD ((amqp_method_number_t) 0x0032001E) /* 50, 30; 3276830 */
@@ -280,6 +286,7 @@ typedef struct amqp_queue_unbind_t_ {
 
 #define AMQP_QUEUE_UNBIND_OK_METHOD ((amqp_method_number_t) 0x00320033) /* 50, 51; 3276851 */
 typedef struct amqp_queue_unbind_ok_t_ {
+  unsigned unused:1;
 } amqp_queue_unbind_ok_t;
 
 #define AMQP_BASIC_QOS_METHOD ((amqp_method_number_t) 0x003C000A) /* 60, 10; 3932170 */
@@ -291,6 +298,7 @@ typedef struct amqp_basic_qos_t_ {
 
 #define AMQP_BASIC_QOS_OK_METHOD ((amqp_method_number_t) 0x003C000B) /* 60, 11; 3932171 */
 typedef struct amqp_basic_qos_ok_t_ {
+  unsigned unused:1;
 } amqp_basic_qos_ok_t;
 
 #define AMQP_BASIC_CONSUME_METHOD ((amqp_method_number_t) 0x003C0014) /* 60, 20; 3932180 */
@@ -393,6 +401,7 @@ typedef struct amqp_file_qos_t_ {
 
 #define AMQP_FILE_QOS_OK_METHOD ((amqp_method_number_t) 0x0046000B) /* 70, 11; 4587531 */
 typedef struct amqp_file_qos_ok_t_ {
+  unsigned unused:1;
 } amqp_file_qos_ok_t;
 
 #define AMQP_FILE_CONSUME_METHOD ((amqp_method_number_t) 0x00460014) /* 70, 20; 4587540 */
@@ -435,6 +444,7 @@ typedef struct amqp_file_open_ok_t_ {
 
 #define AMQP_FILE_STAGE_METHOD ((amqp_method_number_t) 0x00460032) /* 70, 50; 4587570 */
 typedef struct amqp_file_stage_t_ {
+  unsigned unused:1;
 } amqp_file_stage_t;
 
 #define AMQP_FILE_PUBLISH_METHOD ((amqp_method_number_t) 0x0046003C) /* 70, 60; 4587580 */
@@ -487,6 +497,7 @@ typedef struct amqp_stream_qos_t_ {
 
 #define AMQP_STREAM_QOS_OK_METHOD ((amqp_method_number_t) 0x0050000B) /* 80, 11; 5242891 */
 typedef struct amqp_stream_qos_ok_t_ {
+  unsigned unused:1;
 } amqp_stream_qos_ok_t;
 
 #define AMQP_STREAM_CONSUME_METHOD ((amqp_method_number_t) 0x00500014) /* 80, 20; 5242900 */
@@ -542,34 +553,42 @@ typedef struct amqp_stream_deliver_t_ {
 
 #define AMQP_TX_SELECT_METHOD ((amqp_method_number_t) 0x005A000A) /* 90, 10; 5898250 */
 typedef struct amqp_tx_select_t_ {
+  unsigned unused:1;
 } amqp_tx_select_t;
 
 #define AMQP_TX_SELECT_OK_METHOD ((amqp_method_number_t) 0x005A000B) /* 90, 11; 5898251 */
 typedef struct amqp_tx_select_ok_t_ {
+  unsigned unused:1;
 } amqp_tx_select_ok_t;
 
 #define AMQP_TX_COMMIT_METHOD ((amqp_method_number_t) 0x005A0014) /* 90, 20; 5898260 */
 typedef struct amqp_tx_commit_t_ {
+  unsigned unused:1;
 } amqp_tx_commit_t;
 
 #define AMQP_TX_COMMIT_OK_METHOD ((amqp_method_number_t) 0x005A0015) /* 90, 21; 5898261 */
 typedef struct amqp_tx_commit_ok_t_ {
+  unsigned unused:1;
 } amqp_tx_commit_ok_t;
 
 #define AMQP_TX_ROLLBACK_METHOD ((amqp_method_number_t) 0x005A001E) /* 90, 30; 5898270 */
 typedef struct amqp_tx_rollback_t_ {
+  unsigned unused:1;
 } amqp_tx_rollback_t;
 
 #define AMQP_TX_ROLLBACK_OK_METHOD ((amqp_method_number_t) 0x005A001F) /* 90, 31; 5898271 */
 typedef struct amqp_tx_rollback_ok_t_ {
+  unsigned unused:1;
 } amqp_tx_rollback_ok_t;
 
 #define AMQP_DTX_SELECT_METHOD ((amqp_method_number_t) 0x0064000A) /* 100, 10; 6553610 */
 typedef struct amqp_dtx_select_t_ {
+  unsigned unused:1;
 } amqp_dtx_select_t;
 
 #define AMQP_DTX_SELECT_OK_METHOD ((amqp_method_number_t) 0x0064000B) /* 100, 11; 6553611 */
 typedef struct amqp_dtx_select_ok_t_ {
+  unsigned unused:1;
 } amqp_dtx_select_ok_t;
 
 #define AMQP_DTX_START_METHOD ((amqp_method_number_t) 0x00640014) /* 100, 20; 6553620 */
@@ -579,6 +598,7 @@ typedef struct amqp_dtx_start_t_ {
 
 #define AMQP_DTX_START_OK_METHOD ((amqp_method_number_t) 0x00640015) /* 100, 21; 6553621 */
 typedef struct amqp_dtx_start_ok_t_ {
+  unsigned unused:1;
 } amqp_dtx_start_ok_t;
 
 #define AMQP_TUNNEL_REQUEST_METHOD ((amqp_method_number_t) 0x006E000A) /* 110, 10; 7208970 */
@@ -627,6 +647,7 @@ typedef struct amqp_test_table_ok_t_ {
 
 #define AMQP_TEST_CONTENT_METHOD ((amqp_method_number_t) 0x00780028) /* 120, 40; 7864360 */
 typedef struct amqp_test_content_t_ {
+  unsigned unused:1;
 } amqp_test_content_t;
 
 #define AMQP_TEST_CONTENT_OK_METHOD ((amqp_method_number_t) 0x00780029) /* 120, 41; 7864361 */

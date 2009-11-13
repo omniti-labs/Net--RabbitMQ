@@ -347,8 +347,8 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
     body_b.bytes = SvPV(body, len);
     body_b.len = len;
     if(options) {
-      if(NULL != (v = hv_fetch(options, "mandatory", strlen("mandatory"), 0))) mandatory = SvIV(*v) ? true : false;
-      if(NULL != (v = hv_fetch(options, "immediate", strlen("immediate"), 0))) immediate = SvIV(*v) ? true : false;
+      if(NULL != (v = hv_fetch(options, "mandatory", strlen("mandatory"), 0))) mandatory = SvIV(*v) ? 1 : 0;
+      if(NULL != (v = hv_fetch(options, "immediate", strlen("immediate"), 0))) immediate = SvIV(*v) ? 1 : 0;
       if(NULL != (v = hv_fetch(options, "exchange", strlen("exchange"), 0))) exchange_b = amqp_cstring_bytes(SvPV_nolen(*v));
     }
     rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b,
