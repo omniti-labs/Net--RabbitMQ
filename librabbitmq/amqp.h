@@ -223,8 +223,6 @@ extern amqp_rpc_reply_t amqp_login(amqp_connection_state_t state,
 				   int heartbeat,
 				   amqp_sasl_method_enum sasl_method, ...);
 
-extern amqp_rpc_reply_t amqp_rpc_reply;
-
 extern struct amqp_channel_open_ok_t_ *amqp_channel_open(amqp_connection_state_t state,
 							 amqp_channel_t channel);
 
@@ -311,7 +309,7 @@ extern amqp_boolean_t amqp_data_in_buffer(amqp_connection_state_t state);
 /*
  * Expose amqp_rpc_reply to libraries.
  */
-extern amqp_rpc_reply_t amqp_get_rpc_reply(void);
+extern amqp_rpc_reply_t *amqp_get_rpc_reply(void);
 
 #ifdef __cplusplus
 }

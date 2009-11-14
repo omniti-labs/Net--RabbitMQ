@@ -41,7 +41,7 @@ and die on failure.
 
 =item new()
 
-  Creates a new Net::RabbitMQ object.
+Creates a new Net::RabbitMQ object.
 
 =item connect( $hostname, $options )
 
