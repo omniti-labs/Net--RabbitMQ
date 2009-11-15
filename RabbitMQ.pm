@@ -123,11 +123,13 @@ key that will bind the specified queue to the specified exchange.
 This is like the C<queue_bind> with respect to arguments.  This command
 unbinds the queue from the exchange.
 
-=item publish($channel, $routing_key, $options)
+=item publish($channel, $routing_key, $body, $options)
 
 C<$channel> is a channel that has been opened with C<channel_open>.
 
 C<$routing_key> is the name of the routing key for this message.
+
+C<$body> is the payload to enqueue.
 
 C<$options> is an optional hash respecting the following keys:
 
