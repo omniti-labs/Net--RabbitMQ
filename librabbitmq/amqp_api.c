@@ -269,3 +269,44 @@ amqp_rpc_reply_t *amqp_get_rpc_reply(void)
   return &amqp_rpc_reply;
 #endif
 }
+
+/*
+ * Expose tx-style transactions
+ */
+
+amqp_tx_select_ok_t *amqp_tx_select(amqp_connection_state_t state,
+                                    amqp_channel_t channel,
+                                    amqp_table_t arguments)
+{
+  amqp_rpc_reply_t *amqp_rpc_reply;
+  amqp_rpc_reply = amqp_get_rpc_reply();
+  *amqp_rpc_reply =
+    AMQP_SIMPLE_RPC(state, channel, TX, SELECT, SELECT_OK,
+		    amqp_tx_select_t,
+		    channel);
+  return RPC_REPLY(amqp_tx_select_ok_t);
+}
+
+amqp_tx_commit_ok_t *amqp_tx_commit(amqp_connection_state_t state,
+                                    amqp_channel_t channel,
+                                    amqp_table_t arguments)
+{
+  amqp_rpc_reply_t *amqp_rpc_reply;
+  amqp_rpc_reply = amqp_get_rpc_reply();
+  *amqp_rpc_reply =
+    AMQP_SIMPLE_RPC(state, channel, TX, COMMIT, COMMIT_OK,
+		    amqp_tx_commit_t);
+  return RPC_REPLY(amqp_tx_commit_ok_t);
+}
+
+amqp_tx_rollback_ok_t *amqp_tx_rollback(amqp_connection_state_t state,
+                                    amqp_channel_t channel,
+                                    amqp_table_t arguments)
+{
+  amqp_rpc_reply_t *amqp_rpc_reply;
+  amqp_rpc_reply = amqp_get_rpc_reply();
+  *amqp_rpc_reply =
+    AMQP_SIMPLE_RPC(state, channel, TX, ROLLBACK, ROLLBACK_OK,
+		    amqp_tx_rollback_t);
+  return RPC_REPLY(amqp_tx_rollback_ok_t);
+}

@@ -189,6 +189,24 @@ C<$queuename> is the queue to be purged.
 C<$no_wait> a boolean specifying if the call should not wait for
 the server to acknowledge the acknoledgement.
 
+=item tx_select($channel)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+Start a server-side (tx) transaction over $channel.
+
+=item tx_commit($channel)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+Commit a server-side (tx) transaction over $channel.
+
+=item tx_rollback($channel)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+Rollback a server-side (tx) transaction over $channel.
+
 =back
 
 =cut

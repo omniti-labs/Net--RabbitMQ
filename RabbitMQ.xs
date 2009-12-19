@@ -402,3 +402,41 @@ net_rabbitmq_DESTROY(obj)
     amqp_connection_close(obj, AMQP_REPLY_SUCCESS);
     amqp_destroy_connection(obj);
 
+void
+net_rabbitmq_tx_select(conn, channel, args = NULL)
+  Net::RabbitMQ conn
+  int channel
+  HV *args
+  PREINIT:
+    amqp_rpc_reply_t *amqp_rpc_reply;
+    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+  CODE:
+    amqp_tx_select(conn, channel, arguments);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Selecting transaction");
+
+void
+net_rabbitmq_tx_commit(conn, channel, args = NULL)
+  Net::RabbitMQ conn
+  int channel
+  HV *args
+  PREINIT:
+    amqp_rpc_reply_t *amqp_rpc_reply;
+    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+  CODE:
+    amqp_tx_commit(conn, channel, arguments);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Commiting transaction");
+
+void
+net_rabbitmq_tx_rollback(conn, channel, args = NULL)
+  Net::RabbitMQ conn
+  int channel
+  HV *args
+  PREINIT:
+    amqp_rpc_reply_t *amqp_rpc_reply;
+    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+  CODE:
+    amqp_tx_rollback(conn, channel, arguments);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Rolling Back transaction");
