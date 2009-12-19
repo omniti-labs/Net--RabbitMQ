@@ -1,2 +1,7 @@
+0.0.2 - Thu Dec 19 03:00:00 EST 2009
+	* Thread safety added.
+	* txn support from Joshua Kronengold
+	* some docs bugs.
+
 0.0.0.1 - Thu Nov 12 15:46:46 EST 2009
 	* Initial release
