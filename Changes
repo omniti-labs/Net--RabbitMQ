@@ -1,3 +1,7 @@
+0.0.3 - Fri Dec 25 13:23:36 EST 2009
+	* added tests for the txn support
+	* fixed file descriptor leak
+
 0.0.2 - Thu Dec 19 03:00:00 EST 2009
 	* Thread safety added.
 	* txn support from Joshua Kronengold

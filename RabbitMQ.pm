@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.0.2";
+$VERSION = "0.0.3";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
