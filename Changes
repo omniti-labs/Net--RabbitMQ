@@ -1,3 +1,6 @@
+0.0.4 - Tue Dec 29 16:52:45 EST 2009
+	* make the tests use pack 'LL' instead of 'Q' for those that compile there perls incorrectly or cannot afford enough bits to make Q happen.
+
 0.0.3 - Fri Dec 25 13:23:36 EST 2009
 	* added tests for the txn support
 	* fixed file descriptor leak

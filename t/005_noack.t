@@ -26,7 +26,7 @@ is_deeply($payload,
           {
           'body' => "Magic Payload $$",
           'routing_key' => 'nr_test_ack_route',
-          'delivery_tag' => pack('Q', 1),
+          'delivery_tag' => pack('LL', 1, 0),
           'exchange' => 'nr_test_x'
           }, "payload");
 eval { $mq->disconnect(); };
@@ -44,7 +44,7 @@ is_deeply($payload,
           {
           'body' => "Magic Payload $$",
           'routing_key' => 'nr_test_ack_route',
-          'delivery_tag' => pack('Q', 1),
+          'delivery_tag' => pack('LL', 1, 0),
           'exchange' => 'nr_test_x'
           }, "payload");
 eval { $mq->ack(1, $payload->{delivery_tag}); };
