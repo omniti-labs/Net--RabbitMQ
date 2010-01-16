@@ -1,7 +1,7 @@
 use Test::More tests => 10;
 use strict;
 
-my $host = $ENV{'MQHOST'} || "localhost";
+my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
 
 use_ok('Net::RabbitMQ');
 
