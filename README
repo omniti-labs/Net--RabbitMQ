@@ -2,7 +2,8 @@ You can install this using in the usual Perl fashion:
 
 	perl Makefile.PL
 	make
-	make test
+        make test
+	# (or) env MQHOST="localhost" make test
 	make install
 	
 The documentation is in the module file.  Once you install
