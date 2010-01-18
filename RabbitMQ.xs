@@ -2,8 +2,8 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include "librabbitmq/amqp.h"
-#include "librabbitmq/amqp_framing.h"
+#include "amqp.h"
+#include "amqp_framing.h"
 
 typedef amqp_connection_state_t Net__RabbitMQ;
 
