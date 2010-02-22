@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-RabbitMQ
-version:            0.1.0
+version:            0.1.1
 abstract:           interface with RabbitMQ over AMQP
 author:
     - Theo Schlossnagle <jesus@lethargy.org>

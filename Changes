@@ -1,5 +1,7 @@
-0.1.1 - 
+0.1.1 - Mon Feb 22 12:32:57 EST 2010
 	* [rt.cpan.org #53800] make distclean removes files needed for build
+	* manually encode the 64bit delivery_tag to work croass platform for poorly configured perls (no 64bit ints)
+	* add a get method (amqp_basic_get)
 
 0.1.0 - Sun Jan 17 09:49:07 EST 2010
 	* Update test suite to use dev.rabbitmq.com by default; still overridden with MQHOST environment variable.

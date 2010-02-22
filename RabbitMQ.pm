@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.1.0";
+$VERSION = "0.1.1";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -169,6 +169,28 @@ containing the following information:
        exchange => 'nr_test_x',           # exchange used
        content_type => 'foo',             # (only if specified)
        delivery_tag => 1,                 # (used for acks)
+     }
+
+=item get($channel, $queuename, $options)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$queuename> is the name of the queue from which we'd like to consume.
+
+C<$options> is an optional hash respecting the following keys:
+
+This command runs an amqp_basic_get which returns undef immediately
+if no messages are available on the queue and returns a has as follows
+if a message is available.
+
+     {
+       body => 'Magic Transient Payload', # the reconstructed body
+       routing_key => 'nr_test_q',        # route the message took
+       exchange => 'nr_test_x',           # exchange used
+       content_type => 'foo',             # (only if specified)
+       delivery_tag => 1,                 # (used for acks)
+       redelivered => 0,                  # if message is redelivered
+       message_count => 0,                # message count
      }
 
 =item ack($channel, $delivery_tag, $multiple = 0)

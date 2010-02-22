@@ -58,6 +58,72 @@ void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
   }
 }
 
+int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
+  amqp_frame_t frame;
+  amqp_basic_deliver_t *d;
+  amqp_basic_properties_t *p;
+  size_t body_target;
+  size_t body_received;
+  int result;
+
+  result = 0;
+  while (1) {
+    SV *payload;
+
+    if(!piggyback) {
+      amqp_maybe_release_buffers(conn);
+      result = amqp_simple_wait_frame(conn, &frame);
+      if (result <= 0) break;
+      if (frame.frame_type != AMQP_FRAME_METHOD) continue;
+      if (frame.payload.method.id != AMQP_BASIC_DELIVER_METHOD) continue;
+      d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
+      hv_store(RETVAL, "delivery_tag", strlen("delivery_tag"), newSVpvn((const char *)&d->delivery_tag, sizeof(d->delivery_tag)), 0);
+      hv_store(RETVAL, "exchange", strlen("exchange"), newSVpvn(d->exchange.bytes, d->exchange.len), 0);
+      hv_store(RETVAL, "routing_key", strlen("routing_key"), newSVpvn(d->routing_key.bytes, d->routing_key.len), 0);
+      piggyback = 0;
+    }
+
+    result = amqp_simple_wait_frame(conn, &frame);
+    if (result <= 0) break;
+
+    if (frame.frame_type != AMQP_FRAME_HEADER)
+      Perl_croak(aTHX_ "Unexpected header %d!", frame.frame_type);
+
+    p = (amqp_basic_properties_t *) frame.payload.properties.decoded;
+    if (p->_flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
+      hv_store(RETVAL, "content_type", strlen("content_type"),
+               newSVpvn(p->content_type.bytes, p->content_type.len), 0);
+    }
+
+    body_target = frame.payload.properties.body_size;
+    body_received = 0;
+    payload = newSVpvn("", 0);
+
+    while (body_received < body_target) {
+      result = amqp_simple_wait_frame(conn, &frame);
+      if (result <= 0) break;
+
+      if (frame.frame_type != AMQP_FRAME_BODY) {
+        Perl_croak(aTHX_ "Expected fram body, got %d!", frame.frame_type);
+      }
+
+      body_received += frame.payload.body_fragment.len;
+      assert(body_received <= body_target);
+
+      sv_catpvn(payload, frame.payload.body_fragment.bytes, frame.payload.body_fragment.len);
+    }
+
+    if (body_received != body_target) {
+      /* Can only happen when amqp_simple_wait_frame returns <= 0 */
+      /* We break here to close the connection */
+      Perl_croak(aTHX_ "Short read %llu != %llu", (long long unsigned int)body_received, (long long unsigned int)body_target);
+    }
+    hv_store(RETVAL, "body", strlen("body"), payload, 0);
+    break;
+  }
+  return result;
+}
+
 MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
 
 REQUIRE:        1.9505
@@ -246,65 +312,10 @@ HV *
 net_rabbitmq_recv(conn)
   Net::RabbitMQ conn
   PREINIT:
-    amqp_frame_t frame;
     int result = 0;
-    amqp_basic_deliver_t *d;
-    amqp_basic_properties_t *p;
-    size_t body_target;
-    size_t body_received;
   CODE:
     RETVAL = newHV();
-    while (1) {
-      SV *payload;
-      amqp_maybe_release_buffers(conn);
-      result = amqp_simple_wait_frame(conn, &frame);
-      if (result <= 0) break;
-      if (frame.frame_type != AMQP_FRAME_METHOD) continue;
-      if (frame.payload.method.id != AMQP_BASIC_DELIVER_METHOD) continue;
-
-      d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
-      hv_store(RETVAL, "delivery_tag", strlen("delivery_tag"), newSVpvn((const char *)&d->delivery_tag, sizeof(d->delivery_tag)), 0);
-      hv_store(RETVAL, "exchange", strlen("exchange"), newSVpvn(d->exchange.bytes, d->exchange.len), 0);
-      hv_store(RETVAL, "routing_key", strlen("routing_key"), newSVpvn(d->routing_key.bytes, d->routing_key.len), 0);
-
-      result = amqp_simple_wait_frame(conn, &frame);
-      if (result <= 0) break;
-
-      if (frame.frame_type != AMQP_FRAME_HEADER)
-        Perl_croak(aTHX_ "Unexpected header %d!", frame.frame_type);
-
-      p = (amqp_basic_properties_t *) frame.payload.properties.decoded;
-      if (p->_flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
-        hv_store(RETVAL, "content_type", strlen("content_type"),
-                 newSVpvn(p->content_type.bytes, p->content_type.len), 0);
-      }
-
-      body_target = frame.payload.properties.body_size;
-      body_received = 0;
-      payload = newSVpvn("", 0);
-
-      while (body_received < body_target) {
-        result = amqp_simple_wait_frame(conn, &frame);
-        if (result <= 0) break;
-
-        if (frame.frame_type != AMQP_FRAME_BODY) {
-          Perl_croak(aTHX_ "Expected fram body, got %d!", frame.frame_type);
-        }
-
-        body_received += frame.payload.body_fragment.len;
-        assert(body_received <= body_target);
-
-        sv_catpvn(payload, frame.payload.body_fragment.bytes, frame.payload.body_fragment.len);
-      }
-
-      if (body_received != body_target) {
-        /* Can only happen when amqp_simple_wait_frame returns <= 0 */
-        /* We break here to close the connection */
-        Perl_croak(aTHX_ "Short read %llu != %llu", (long long unsigned int)body_received, (long long unsigned int)body_target);
-      }
-      hv_store(RETVAL, "body", strlen("body"), payload, 0);
-      break;
-    }
+    result = internal_recv(RETVAL, conn, 0);
     if(result <= 0) Perl_croak(aTHX_ "Bad frame read.");
   OUTPUT:
     RETVAL
@@ -370,6 +381,41 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
     rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b,
                             mandatory, immediate, properties, body_b);
     RETVAL = rv;
+  OUTPUT:
+    RETVAL
+
+SV *
+net_rabbitmq_get(conn, channel, queuename, options = NULL)
+  Net::RabbitMQ conn
+  int channel
+  char *queuename
+  HV *options
+  PREINIT:
+    amqp_rpc_reply_t r;
+    int no_ack = 1;
+  CODE:
+    if(options)
+      int_from_hv(options, no_ack);
+    r = amqp_basic_get(conn, channel, queuename ? amqp_cstring_bytes(queuename) : AMQP_EMPTY_BYTES, no_ack);
+    die_on_amqp_error(aTHX_ r, "basic_get");
+    if(r.reply.id == AMQP_BASIC_GET_OK_METHOD) {
+      HV *hv;
+      amqp_basic_get_ok_t *ok = (amqp_basic_get_ok_t *)r.reply.decoded;
+      hv = newHV();
+      hv_store(hv, "delivery_tag", strlen("delivery_tag"), newSVpvn((const char *)&ok->delivery_tag, sizeof(ok->delivery_tag)), 0);
+      hv_store(hv, "redelivered", strlen("redelivered"), newSViv(ok->redelivered), 0);
+      hv_store(hv, "exchange", strlen("exchange"), newSVpvn(ok->exchange.bytes, ok->exchange.len), 0);
+      hv_store(hv, "routing_key", strlen("routing_key"), newSVpvn(ok->routing_key.bytes, ok->routing_key.len), 0);
+      hv_store(hv, "message_count", strlen("message_count"), newSViv(ok->message_count), 0);
+      if(amqp_data_in_buffer(conn)) {
+        int rv;
+        rv = internal_recv(hv, conn, 1);
+        if(rv <= 0) Perl_croak(aTHX_ "Bad frame read.");
+      }
+      RETVAL = (SV *)newRV((SV *)hv);
+    }
+    else
+      RETVAL = &PL_sv_undef;
   OUTPUT:
     RETVAL
 

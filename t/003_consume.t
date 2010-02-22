@@ -22,7 +22,7 @@ is_deeply($rv,
           {
           'body' => 'Magic Payload',
           'routing_key' => 'nr_test_route',
-          'delivery_tag' => pack('LL', 1, 0),
+          'delivery_tag' => "\001\000\000\000\000\000\000\000",
           'exchange' => 'nr_test_x'
           }, "payload");
 
