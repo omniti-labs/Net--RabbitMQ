@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+
+#include <config.h> /* Perl's CORE config */
+#ifndef USE_ITHREADS
+#define DISABLE_THREADS
+#endif
+
 #ifndef DISABLE_THREADS
 #include <pthread.h>
 #endif

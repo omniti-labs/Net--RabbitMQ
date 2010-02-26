@@ -1,3 +1,6 @@
+0.1.2
+	* use perl's USE_ITHREADS as a define to enable thread safety or not.
+
 0.1.1 - Mon Feb 22 12:32:57 EST 2010
 	* [rt.cpan.org #53800] make distclean removes files needed for build
 	* manually encode the 64bit delivery_tag to work croass platform for poorly configured perls (no 64bit ints)
