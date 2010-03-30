@@ -1,5 +1,6 @@
-0.1.2
+0.1.2 - Tue Mar 30 10:02:25 EDT 2010
 	* use perl's USE_ITHREADS as a define to enable thread safety or not.
+	* Fix some macro use that was certainly wrong yet gcc silently allowed.
 
 0.1.1 - Mon Feb 22 12:32:57 EST 2010
 	* [rt.cpan.org #53800] make distclean removes files needed for build
