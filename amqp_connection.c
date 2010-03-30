@@ -377,7 +377,7 @@ int amqp_send_frame(amqp_connection_state_t state,
       AMQP_CHECK_RESULT(write(state->sockfd, encoded.bytes, payload_len));
       {
 	assert(FOOTER_SIZE == 1);
-	char frame_end_byte = AMQP_FRAME_END;
+	unsigned char frame_end_byte = AMQP_FRAME_END;
 	AMQP_CHECK_RESULT(write(state->sockfd, &frame_end_byte, FOOTER_SIZE));
       }
       return 0;
@@ -409,7 +409,7 @@ int amqp_send_frame_to(amqp_connection_state_t state,
       AMQP_CHECK_RESULT(fn(context, encoded.bytes, payload_len));
       {
 	assert(FOOTER_SIZE == 1);
-	char frame_end_byte = AMQP_FRAME_END;
+	unsigned char frame_end_byte = AMQP_FRAME_END;
 	AMQP_CHECK_RESULT(fn(context, &frame_end_byte, FOOTER_SIZE));
       }
       return 0;

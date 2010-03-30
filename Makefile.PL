@@ -11,5 +11,6 @@ WriteMakefile(
         VERSION_FROM    => 'RabbitMQ.pm',
 	OBJECT          => "RabbitMQ.o $ofiles",
 	C		=> $cfiles,
+	OPTIMIZE	=> $ENV{'OPTIMIZE'}
         );
 
