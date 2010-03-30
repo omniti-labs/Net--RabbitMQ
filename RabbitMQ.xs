@@ -396,6 +396,7 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
   CODE:
     if(options)
       int_from_hv(options, no_ack);
+    amqp_maybe_release_buffers(conn);
     r = amqp_basic_get(conn, channel, queuename ? amqp_cstring_bytes(queuename) : AMQP_EMPTY_BYTES, no_ack);
     die_on_amqp_error(aTHX_ r, "basic_get");
     if(r.reply.id == AMQP_BASIC_GET_OK_METHOD) {
