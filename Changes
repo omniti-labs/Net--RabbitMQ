@@ -1,4 +1,5 @@
-0.1.4 -
+0.1.4 - Thu Apr  8 00:18:13 EDT 2010
+	* another attempt at getting CPAN testers is_deeply to accept truth
 	* memory leak with basic consume
 
 0.1.3 - Tue Mar 30 11:21:13 EDT 2010
