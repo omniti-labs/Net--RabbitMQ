@@ -28,13 +28,14 @@ eval { $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr
 
 eval { $getr = $mq->get(1, $queuename); };
 is($@, '', "get");
+$getr->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($getr,
           {
             redelivered => 0,
             routing_key => 'nr_test_q',
             exchange => 'nr_test_x',
             message_count => 0,
-            delivery_tag => "\001\000\000\000\000\000\000\000",
+            delivery_tag => '0100000000000000',
             body => 'Magic Transient Payload',
           }, "get should see message");
 

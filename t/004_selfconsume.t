@@ -25,11 +25,12 @@ is($@, '', "consume");
 my $rv = {};
 eval { $rv = $mq->recv(); };
 is($@, '', "recv");
+$rv->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($rv,
           {
           'body' => 'Magic Transient Payload',
           'routing_key' => 'nr_test_q',
-          'delivery_tag' => "\001\000\000\000\000\000\000\000",
+          'delivery_tag' => '0100000000000000',
           'exchange' => 'nr_test_x'
           }, "payload");
 

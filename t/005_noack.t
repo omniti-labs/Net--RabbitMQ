@@ -24,11 +24,12 @@ eval { $mq->consume(1, "nr_test_ack", { no_ack => 0 } ); };
 is($@, '', "consuming");
 my $payload = {};
 eval { $payload = $mq->recv(); };
+$payload->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($payload,
           {
           'body' => "Magic Payload $$",
           'routing_key' => 'nr_test_ack_route',
-          'delivery_tag' => "\001\000\000\000\000\000\000\000",
+          'delivery_tag' => '0100000000000000',
           'exchange' => 'nr_test_x'
           }, "payload");
 eval { $mq->disconnect(); };
@@ -42,14 +43,16 @@ eval { $mq->consume(1, "nr_test_ack", { no_ack => 0 } ); };
 is($@, '', "consuming");
 $payload = {};
 eval { $payload = $mq->recv(); };
+my $ack_tag = $payload->{delivery_tag};
+$payload->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($payload,
           {
           'body' => "Magic Payload $$",
           'routing_key' => 'nr_test_ack_route',
-          'delivery_tag' => "\001\000\000\000\000\000\000\000",
+          'delivery_tag' => '0100000000000000',
           'exchange' => 'nr_test_x'
           }, "payload");
-eval { $mq->ack(1, $payload->{delivery_tag}); };
+eval { $mq->ack(1, $ack_tag); };
 is($@, '', "acking");
 
 1;
