@@ -1,5 +1,6 @@
-0.1.5 -
+0.1.5 - Thu Apr 22 11:44:52 EDT 2010
 	* support for properties from Bob Goldstein < bobg at uic dot edu >
+	* retarded and seemingly futile attempt to compensate for no pack Q
 
 0.1.4 - Thu Apr  8 00:18:13 EDT 2010
 	* another attempt at getting CPAN testers is_deeply to accept truth
