@@ -31,7 +31,8 @@ is_deeply($rv,
           'body' => 'Magic Transient Payload',
           'routing_key' => 'nr_test_q',
           'delivery_tag' => '0100000000000000',
-          'exchange' => 'nr_test_x'
+          'exchange' => 'nr_test_x',
+          'props' => {},
           }, "payload");
 
 1;

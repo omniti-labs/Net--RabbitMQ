@@ -30,7 +30,8 @@ is_deeply($payload,
           'body' => "Magic Payload $$",
           'routing_key' => 'nr_test_ack_route',
           'delivery_tag' => '0100000000000000',
-          'exchange' => 'nr_test_x'
+          'exchange' => 'nr_test_x',
+          'props' => {},
           }, "payload");
 eval { $mq->disconnect(); };
 is($@, '', "disconnect");
@@ -50,7 +51,8 @@ is_deeply($payload,
           'body' => "Magic Payload $$",
           'routing_key' => 'nr_test_ack_route',
           'delivery_tag' => '0100000000000000',
-          'exchange' => 'nr_test_x'
+          'exchange' => 'nr_test_x',
+          'props' => {},
           }, "payload");
 eval { $mq->ack(1, $ack_tag); };
 is($@, '', "acking");

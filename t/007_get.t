@@ -1,4 +1,4 @@
-use Test::More tests => 11;
+use Test::More tests => 13;
 use strict;
 
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
@@ -36,7 +36,55 @@ is_deeply($getr,
             exchange => 'nr_test_x',
             message_count => 0,
             delivery_tag => '0100000000000000',
+            'props' => {},
             body => 'Magic Transient Payload',
           }, "get should see message");
+
+
+eval { $mq->publish(1, "nr_test_q", "Magic Transient Payload 2", 
+                     { exchange => "nr_test_x" }, 
+                     {
+                       content_type => 'text/plain',
+                       content_encoding => 'none',
+                       correlation_id => '123',
+                       reply_to => 'somequeue',
+                       expiration => 'later',
+                       message_id => 'ABC',
+                       type => 'notmytype',
+                       user_id => 'yoda',
+                       app_id => 'idd',
+                       delivery_mode => 1,
+                       priority => 2,
+                       timestamp => 1271857990,
+                     },
+                     ); };
+
+eval { $getr = $mq->get(1, $queuename); };
+is($@, '', "get");
+$getr->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
+is_deeply($getr,
+          {
+            redelivered => 0,
+            routing_key => 'nr_test_q',
+            exchange => 'nr_test_x',
+            message_count => 0,
+            delivery_tag => '0200000000000000',
+            props => {
+                content_type => 'text/plain',
+                content_encoding => 'none',
+                correlation_id => '123',
+                reply_to => 'somequeue',
+                expiration => 'later',
+                message_id => 'ABC',
+                type => 'notmytype',
+                user_id => 'yoda',
+                app_id => 'idd',
+                delivery_mode => 1,
+                priority => 2,
+                timestamp => 1271857990,
+            },
+            body => 'Magic Transient Payload 2',
+          }, "get should see message");
+
 
 1;

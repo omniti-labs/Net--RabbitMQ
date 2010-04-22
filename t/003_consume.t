@@ -24,7 +24,21 @@ is_deeply($rv,
           'body' => 'Magic Payload',
           'routing_key' => 'nr_test_route',
           'delivery_tag' => '0100000000000000',
-          'exchange' => 'nr_test_x'
+          'exchange' => 'nr_test_x',
+          'props' => {
+                content_type => 'text/plain',
+                content_encoding => 'none',
+                correlation_id => '123',
+                reply_to => 'somequeue',
+                expiration => 'later',
+                message_id => 'ABC',
+                type => 'notmytype',
+                user_id => 'yoda',
+                app_id => 'idd',
+                delivery_mode => 1,
+                priority => 2,
+                timestamp => 1271857990,
+            },
           }, "payload");
 
 1;

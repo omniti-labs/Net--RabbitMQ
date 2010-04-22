@@ -89,11 +89,60 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     if (frame.frame_type != AMQP_FRAME_HEADER)
       Perl_croak(aTHX_ "Unexpected header %d!", frame.frame_type);
 
+    HV *props;
+    props = newHV();
+    hv_store(RETVAL, "props", strlen("props"), newRV_inc((SV *)props), 0);
+
     p = (amqp_basic_properties_t *) frame.payload.properties.decoded;
     if (p->_flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
-      hv_store(RETVAL, "content_type", strlen("content_type"),
+      hv_store(props, "content_type", strlen("content_type"),
                newSVpvn(p->content_type.bytes, p->content_type.len), 0);
     }
+    if (p->_flags & AMQP_BASIC_CONTENT_ENCODING_FLAG) {
+      hv_store(props, "content_encoding", strlen("content_encoding"),
+               newSVpvn(p->content_encoding.bytes, p->content_encoding.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_CORRELATION_ID_FLAG) {
+      hv_store(props, "correlation_id", strlen("correlation_id"),
+               newSVpvn(p->correlation_id.bytes, p->correlation_id.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_REPLY_TO_FLAG) {
+      hv_store(props, "reply_to", strlen("reply_to"),
+               newSVpvn(p->reply_to.bytes, p->reply_to.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_EXPIRATION_FLAG) {
+      hv_store(props, "expiration", strlen("expiration"),
+               newSVpvn(p->expiration.bytes, p->expiration.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_MESSAGE_ID_FLAG) {
+      hv_store(props, "message_id", strlen("message_id"),
+               newSVpvn(p->message_id.bytes, p->message_id.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_TYPE_FLAG) {
+      hv_store(props, "type", strlen("type"),
+               newSVpvn(p->type.bytes, p->type.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_USER_ID_FLAG) {
+      hv_store(props, "user_id", strlen("user_id"),
+               newSVpvn(p->user_id.bytes, p->user_id.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_APP_ID_FLAG) {
+      hv_store(props, "app_id", strlen("app_id"),
+               newSVpvn(p->app_id.bytes, p->app_id.len), 0);
+    }
+    if (p->_flags & AMQP_BASIC_DELIVERY_MODE_FLAG) {
+      hv_store(props, "delivery_mode", strlen("delivery_mode"),
+               newSViv(p->delivery_mode), 0);
+    }
+    if (p->_flags & AMQP_BASIC_PRIORITY_FLAG) {
+      hv_store(props, "priority", strlen("priority"),
+               newSViv(p->priority), 0);
+    }
+    if (p->_flags & AMQP_BASIC_TIMESTAMP_FLAG) {
+      hv_store(props, "timestamp", strlen("timestamp"),
+               newSViv(p->timestamp), 0);
+    }
+
 
     body_target = frame.payload.properties.body_size;
     body_received = 0;
@@ -367,7 +416,7 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
     amqp_bytes_t exchange_b;
     amqp_bytes_t routing_key_b;
     amqp_bytes_t body_b;
-    struct amqp_basic_properties_t_ const *properties = NULL;
+    struct amqp_basic_properties_t_ properties;
     STRLEN len;
   CODE:
     routing_key_b = amqp_cstring_bytes(routing_key);
@@ -378,8 +427,59 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
       if(NULL != (v = hv_fetch(options, "immediate", strlen("immediate"), 0))) immediate = SvIV(*v) ? 1 : 0;
       if(NULL != (v = hv_fetch(options, "exchange", strlen("exchange"), 0))) exchange_b = amqp_cstring_bytes(SvPV_nolen(*v));
     }
-    rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b,
-                            mandatory, immediate, properties, body_b);
+    properties.headers = AMQP_EMPTY_TABLE;
+    properties._flags = 0;
+    if (props) {
+      if (NULL != (v = hv_fetch(props, "content_type", strlen("content_type"), 0))) {
+        properties.content_type     = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_CONTENT_TYPE_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "content_encoding", strlen("content_encoding"), 0))) {
+        properties.content_encoding = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_CONTENT_ENCODING_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "correlation_id", strlen("correlation_id"), 0))) {
+        properties.correlation_id   =  amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_CORRELATION_ID_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "reply_to", strlen("reply_to"), 0))) {
+        properties.reply_to         = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_REPLY_TO_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "expiration", strlen("expiration"), 0))) {
+        properties.expiration       = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_EXPIRATION_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "message_id", strlen("message_id"), 0))) {
+        properties.message_id       = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_MESSAGE_ID_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "type", strlen("type"), 0))) {
+        properties.type             = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_TYPE_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "user_id", strlen("user_id"), 0))) {
+        properties.user_id          = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_USER_ID_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "app_id", strlen("app_id"), 0))) {
+        properties.app_id           = amqp_cstring_bytes(SvPV_nolen(*v));
+        properties._flags |= AMQP_BASIC_APP_ID_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "delivery_mode", strlen("delivery_mode"), 0))) {
+        properties.delivery_mode    = (uint8_t) SvIV(*v);
+        properties._flags |= AMQP_BASIC_DELIVERY_MODE_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "priority", strlen("priority"), 0))) {
+        properties.priority         = (uint8_t) SvIV(*v);
+        properties._flags |= AMQP_BASIC_PRIORITY_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "timestamp", strlen("timestamp"), 0))) {
+        properties.timestamp        = (uint64_t) SvIV(*v);
+        properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
+      }
+    }
+    rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b, mandatory, immediate, &properties, body_b);
     RETVAL = rv;
   OUTPUT:
     RETVAL

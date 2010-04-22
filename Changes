@@ -1,3 +1,6 @@
+0.1.5 -
+	* support for properties from Bob Goldstein < bobg at uic dot edu >
+
 0.1.4 - Thu Apr  8 00:18:13 EDT 2010
 	* another attempt at getting CPAN testers is_deeply to accept truth
 	* memory leak with basic consume
