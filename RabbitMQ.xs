@@ -91,7 +91,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
 
     HV *props;
     props = newHV();
-    hv_store(RETVAL, "props", strlen("props"), newRV_inc((SV *)props), 0);
+    hv_store(RETVAL, "props", strlen("props"), newRV((SV *)props), 0);
 
     p = (amqp_basic_properties_t *) frame.payload.properties.decoded;
     if (p->_flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
