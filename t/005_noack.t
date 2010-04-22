@@ -1,7 +1,7 @@
 use Test::More tests => 16;
 use strict;
 
-my $dtag=(unpack("L",pack("N",1)) == 1)?'0100000000000000':'0000000000000001';
+my $dtag=(unpack("L",pack("N",1)) != 1)?'0100000000000000':'0000000000000001';
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
 
 use_ok('Net::RabbitMQ');
