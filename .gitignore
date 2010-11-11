@@ -1,0 +1,6 @@
+Makefile
+RabbitMQ.c
+RabbitMQ.bs
+*.o
+pm_to_blib
+blib
