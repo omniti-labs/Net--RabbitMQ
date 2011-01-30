@@ -136,6 +136,21 @@ amqp_exchange_declare_ok_t *amqp_exchange_declare(amqp_connection_state_t state,
   return RPC_REPLY(amqp_exchange_declare_ok_t);
 }
 
+amqp_exchange_delete_ok_t *amqp_exchange_delete(amqp_connection_state_t state,
+                                                amqp_channel_t channel,
+                                                amqp_bytes_t exchange,
+                                                amqp_boolean_t if_unused,
+                                                amqp_boolean_t nowait)
+{
+  amqp_rpc_reply_t *amqp_rpc_reply;
+  amqp_rpc_reply = amqp_get_rpc_reply();
+  *amqp_rpc_reply =
+    AMQP_SIMPLE_RPC(state, channel, EXCHANGE, DELETE, DELETE_OK,
+                    amqp_exchange_delete_t,
+                    0, exchange, if_unused, nowait);
+  return RPC_REPLY(amqp_exchange_delete_ok_t);
+}
+
 amqp_queue_declare_ok_t *amqp_queue_declare(amqp_connection_state_t state,
 					    amqp_channel_t channel,
 					    amqp_bytes_t queue,

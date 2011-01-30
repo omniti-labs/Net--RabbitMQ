@@ -258,6 +258,12 @@ extern struct amqp_exchange_declare_ok_t_ *amqp_exchange_declare(amqp_connection
 								 amqp_boolean_t auto_delete,
 								 amqp_table_t arguments);
 
+extern struct amqp_exchange_delete_ok_t_ *amqp_exchange_delete(amqp_connection_state_t state,
+							       amqp_channel_t channel,
+							       amqp_bytes_t exchange,
+							       amqp_boolean_t if_unused,
+							       amqp_boolean_t nowait);
+
 extern struct amqp_queue_declare_ok_t_ *amqp_queue_declare(amqp_connection_state_t state,
 							   amqp_channel_t channel,
 							   amqp_bytes_t queue,

@@ -13,7 +13,7 @@ eval { $mq->connect($host, { user => "guest", password => "guest" }); };
 is($@, '', "connect");
 eval { $mq->channel_open(1); };
 is($@, '', "channel_open");
-eval { $mq->consume(1, "nr_test_hole"); };
+eval { $mq->consume(1, "nr_test_hole", {consumer_tag=>'ctag', no_local=>0,no_ack=>1,exclusive=>0}); };
 is($@, '', "consume");
 
 my $rv = {};
@@ -26,6 +26,7 @@ is_deeply($rv,
           'routing_key' => 'nr_test_route',
           'delivery_tag' => $dtag,
           'exchange' => 'nr_test_x',
+          'consumer_tag' => 'ctag',
           'props' => {
                 content_type => 'text/plain',
                 content_encoding => 'none',

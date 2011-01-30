@@ -20,7 +20,7 @@ isnt($queuename, '', "queue_declare -> private name");
 eval { $mq->queue_bind(1, $queuename, "nr_test_x", "nr_test_q"); };
 is($@, '', "queue_bind");
 eval { $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr_test_x" }); };
-eval { $mq->consume(1, $queuename); };
+eval { $mq->consume(1, $queuename, {consumer_tag=>'ctag', no_local=>0,no_ack=>1,exclusive=>0}); };
 is($@, '', "consume");
 
 my $rv = {};
@@ -33,6 +33,7 @@ is_deeply($rv,
           'routing_key' => 'nr_test_q',
           'delivery_tag' => $dtag,
           'exchange' => 'nr_test_x',
+          'consumer_tag' => 'ctag',
           'props' => {},
           }, "payload");
 

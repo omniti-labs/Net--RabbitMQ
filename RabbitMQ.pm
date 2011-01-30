@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.1.5";
+$VERSION = "0.1.8";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -90,6 +90,19 @@ C<$options> is an optional hash respecting the following keys:
        auto_delete => $boolean, #default 1
      }
 
+=item exchange_delete($channel, $exchange, $options)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$exchange> is the name of the exchange to be deleted.
+
+C<$options> is an optional hash respecting the following keys:
+
+     {
+       if_unused => $boolean,   #default 1
+       nowait => $boolean,      #default 0
+     }
+
 =item queue_declare($channel, $queuename, $options)
 
 C<$channel> is a channel that has been opened with C<channel_open>.
@@ -123,7 +136,7 @@ key that will bind the specified queue to the specified exchange.
 This is like the C<queue_bind> with respect to arguments.  This command
 unbinds the queue from the exchange.
 
-=item publish($channel, $routing_key, $body, $options)
+=item publish($channel, $routing_key, $body, $options, $props)
 
 C<$channel> is a channel that has been opened with C<channel_open>.
 
@@ -137,6 +150,22 @@ C<$options> is an optional hash respecting the following keys:
        exchange => $exchange,   #default 'amq.direct'
        mandatory => $boolean,   #default 0
        immediate => $boolean,   #default 0
+     }
+
+C<$props> is an optional hash (the AMQP 'props') respecting the following keys:
+     {
+       content_type => $string,
+       content_encoding => $string,
+       correlation_id => $string,
+       reply_to => $string,
+       expiration => $string,
+       message_id => $string,
+       type => $string,
+       user_id => $string,
+       app_id => $string,
+       delivery_mode => $integer,
+       priority => $integer,
+       timestamp => $integer,
      }
 
 =item consume($channel, $queuename, $options)
@@ -154,6 +183,7 @@ C<$options> is an optional hash respecting the following keys:
        exclusive => $boolean,   #default 0
      }
 
+
 The consumer_tag is returned.  This command does B<not> return AMQP
 frames, it simply notifies RabbitMQ that messages for this queue should
 be delivered down the specified channel.
@@ -167,8 +197,25 @@ containing the following information:
        body => 'Magic Transient Payload', # the reconstructed body
        routing_key => 'nr_test_q',        # route the message took
        exchange => 'nr_test_x',           # exchange used
-       content_type => 'foo',             # (only if specified)
        delivery_tag => 1,                 # (used for acks)
+       consumer_tag => 'c_tag',           # tag from consume()
+       props => $props,                   # hashref sent in
+     }
+
+C<$props> is the hash sent by publish()  respecting the following keys:
+     {
+       content_type => $string,
+       content_encoding => $string,
+       correlation_id => $string,
+       reply_to => $string,
+       expiration => $string,
+       message_id => $string,
+       type => $string,
+       user_id => $string,
+       app_id => $string,
+       delivery_mode => $integer,
+       priority => $integer,
+       timestamp => $integer,
      }
 
 =item get($channel, $queuename, $options)

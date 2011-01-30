@@ -10,7 +10,7 @@
 #include "amqp_config.h"
 
 char const *amqp_version(void) {
-  return VERSION; /* defined in config.h */
+  return AMQP_IMPL_VERSION; /* defined in config.h */
 }
 
 void init_amqp_pool(amqp_pool_t *pool, size_t pagesize) {

@@ -104,6 +104,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
       d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
       hv_store(RETVAL, "delivery_tag", strlen("delivery_tag"), newSVpvn((const char *)&d->delivery_tag, sizeof(d->delivery_tag)), 0);
       hv_store(RETVAL, "exchange", strlen("exchange"), newSVpvn(d->exchange.bytes, d->exchange.len), 0);
+      hv_store(RETVAL, "consumer_tag", strlen("consumer_tag"), newSVpvn(d->consumer_tag.bytes, d->consumer_tag.len), 0);
       hv_store(RETVAL, "routing_key", strlen("routing_key"), newSVpvn(d->routing_key.bytes, d->routing_key.len), 0);
       piggyback = 0;
     }
@@ -116,7 +117,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
 
     HV *props;
     props = newHV();
-    hv_store(RETVAL, "props", strlen("props"), newRV((SV *)props), 0);
+    hv_store(RETVAL, "props", strlen("props"), newRV_noinc((SV *)props), 0);
 
     p = (amqp_basic_properties_t *) frame.payload.properties.decoded;
     if (p->_flags & AMQP_BASIC_CONTENT_TYPE_FLAG) {
@@ -287,6 +288,25 @@ net_rabbitmq_exchange_declare(conn, channel, exchange, options = NULL, args = NU
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Declaring exchange");
 
+void
+net_rabbitmq_exchange_delete(conn, channel, exchange, options = NULL)
+  Net::RabbitMQ conn
+  int channel
+  char *exchange
+  HV *options
+  PREINIT:
+    amqp_rpc_reply_t *amqp_rpc_reply;
+    int if_unused = 1;
+    int nowait = 0;
+  CODE:
+    if(options) {
+      int_from_hv(options, if_unused);
+      int_from_hv(options, nowait);
+    }
+    amqp_exchange_delete(conn, channel, amqp_cstring_bytes(exchange), if_unused, nowait);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Deleting exchange");
+
 SV *
 net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
   Net::RabbitMQ conn
@@ -397,6 +417,7 @@ net_rabbitmq_recv(conn)
     int result = 0;
   CODE:
     RETVAL = newHV();
+    sv_2mortal((SV*)RETVAL);
     result = internal_recv(RETVAL, conn, 0);
     if(result <= 0) Perl_croak(aTHX_ "Bad frame read.");
   OUTPUT:
@@ -446,7 +467,7 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
     amqp_boolean_t mandatory = 0;
     amqp_boolean_t immediate = 0;
     int rv;
-    amqp_bytes_t exchange_b;
+    amqp_bytes_t exchange_b = { 0 };
     amqp_bytes_t routing_key_b;
     amqp_bytes_t body_b;
     struct amqp_basic_properties_t_ properties;
@@ -546,7 +567,7 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
         rv = internal_recv(hv, conn, 1);
         if(rv <= 0) Perl_croak(aTHX_ "Bad frame read.");
       }
-      RETVAL = (SV *)newRV((SV *)hv);
+      RETVAL = (SV *)newRV_noinc((SV *)hv);
     }
     else
       RETVAL = &PL_sv_undef;

@@ -21,7 +21,7 @@ eval { $mq->purge(1, "nr_test_ack"); };
 is($@, '', "purge");
 eval { $mq->publish(1, "nr_test_ack_route", "Magic Payload $$", { exchange => "nr_test_x" }); };
 is($@, '', "publish");
-eval { $mq->consume(1, "nr_test_ack", { no_ack => 0 } ); };
+eval { $mq->consume(1, "nr_test_ack", { no_ack => 0, consumer_tag=>'ctag' } ); };
 is($@, '', "consuming");
 my $payload = {};
 eval { $payload = $mq->recv(); };
@@ -32,6 +32,7 @@ is_deeply($payload,
           'routing_key' => 'nr_test_ack_route',
           'delivery_tag' => $dtag,
           'exchange' => 'nr_test_x',
+          'consumer_tag' => 'ctag',
           'props' => {},
           }, "payload");
 eval { $mq->disconnect(); };
@@ -41,7 +42,7 @@ eval { $mq->connect($host, { user => "guest", password => "guest" }); };
 is($@, '', "connect");
 eval { $mq->channel_open(1); };
 is($@, '', "channel_open");
-eval { $mq->consume(1, "nr_test_ack", { no_ack => 0 } ); };
+eval { $mq->consume(1, "nr_test_ack", { no_ack => 0, consumer_tag=>'ctag' } ); };
 is($@, '', "consuming");
 $payload = {};
 eval { $payload = $mq->recv(); };
@@ -53,6 +54,7 @@ is_deeply($payload,
           'routing_key' => 'nr_test_ack_route',
           'delivery_tag' => $dtag,
           'exchange' => 'nr_test_x',
+          'consumer_tag' => 'ctag',
           'props' => {},
           }, "payload");
 eval { $mq->ack(1, $ack_tag); };

@@ -27,7 +27,7 @@ is($@, '', "tx_rollback");
 eval { $mq->publish(1, "nr_test_q", "Magic Transient Payload (Commit)", { exchange => "nr_test_x" }); };
 eval { $mq->tx_commit(1); };
 is($@, '', "tx_commit");
-eval { $mq->consume(1, $queuename); };
+eval { $mq->consume(1, $queuename, {consumer_tag=>'ctag', no_local=>0,no_ack=>1,exclusive=>0} ); };
 is($@, '', "consume");
 
 my $rv = {};
@@ -40,6 +40,7 @@ is_deeply($rv,
           'routing_key' => 'nr_test_q',
           'delivery_tag' => $dtag,
           'exchange' => 'nr_test_x',
+          'consumer_tag' => 'ctag',
           'props' => {},
           }, "payload");
 

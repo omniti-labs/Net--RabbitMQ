@@ -1,6 +1,20 @@
 	* add a basic return callback registration point
 	* add basic qos support
 
+0.1.8 - Sat Oct  9 11:11:36 EDT 2010
+	* missed a gratuitous memory leak somehow
+
+0.1.7 - Sat Oct  9 09:10:31 EDT 2010
+	* amqp_exchange_delete prototype
+	* memory leak fix from Trevor Little
+
+0.1.6 - Sun Jul 18 10:02:36 PDT 2010
+	* fix for uninitialized exchange when no options are passed.
+	* add consumer tags and docs
+	* add delete_exchange from Richard Wallman
+	* enhance delete_exchange with if_unused and nowait options
+		from Brian Clapper
+
 0.1.5 - Thu Apr 22 11:44:52 EDT 2010
 	* support for properties from Bob Goldstein < bobg at uic dot edu >
 	* retarded and seemingly futile attempt to compensate for no pack Q
