@@ -322,7 +322,7 @@ extern struct amqp_tx_rollback_ok_t_ *amqp_tx_rollback(amqp_connection_state_t s
             amqp_channel_t channel,
             amqp_table_t arguments);
 
-extern struct amqp_basic_consume_ok_t_ *amqp_basic_qos(amqp_connection_state_t state,
+extern struct amqp_basic_qos_ok_t_ *amqp_basic_qos(amqp_connection_state_t state,
 	    amqp_channel_t channel,
 	    uint32_t prefetch_size,
 	    uint16_t prefetch_count,

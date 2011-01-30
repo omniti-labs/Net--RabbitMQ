@@ -278,6 +278,18 @@ Rollback a server-side (tx) transaction over $channel.
 
 =back
 
+=item basic_qos($channel, $options)
+
+C<$options> is an optional hash respecting the following keys:
+
+     {
+       prefetch_count => $cnt,  #default 0
+       prefetch_size  => $size, #default 0
+       global         => $bool, #default 0
+     }
+
+Set quality of service flags on the current $channel.
+
 =cut
 
 1;

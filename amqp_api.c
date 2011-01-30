@@ -332,17 +332,17 @@ amqp_tx_rollback_ok_t *amqp_tx_rollback(amqp_connection_state_t state,
   return RPC_REPLY(amqp_tx_rollback_ok_t);
 }
 
-amqp_basic_consume_ok_t *amqp_basic_qos(amqp_connection_state_t state,
-					amqp_channel_t channel,
-					uint32_t prefetch_size,
-					uint16_t prefetch_count,
-					amqp_boolean_t global)
+amqp_basic_qos_ok_t *amqp_basic_qos(amqp_connection_state_t state,
+				    amqp_channel_t channel,
+				    uint32_t prefetch_size,
+				    uint16_t prefetch_count,
+				    amqp_boolean_t global)
 {
   amqp_rpc_reply_t *amqp_rpc_reply;
   amqp_rpc_reply = amqp_get_rpc_reply();
   *amqp_rpc_reply =
     AMQP_SIMPLE_RPC(state, channel, BASIC, QOS, QOS_OK,
 		    amqp_basic_qos_t, prefetch_size, prefetch_count, global);
-  return RPC_REPLY(amqp_basic_consume_ok_t);
+  return RPC_REPLY(amqp_basic_qos_ok_t);
 }
 
