@@ -629,3 +629,25 @@ net_rabbitmq_tx_rollback(conn, channel, args = NULL)
     amqp_tx_rollback(conn, channel, arguments);
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Rolling Back transaction");
+
+void
+net_rabbitmq_basic_qos(conn, channel, args = NULL)
+  Net::RabbitMQ conn
+  int channel
+  HV *args
+  PREINIT:
+    SV **v;
+    amqp_rpc_reply_t *amqp_rpc_reply;
+    uint32_t prefetch_size = 0;
+    uint16_t prefetch_count = 0;
+    amqp_boolean_t global = 0;
+  CODE:
+    if(args) {
+      if(NULL != (v = hv_fetch(args, "prefetch_size", strlen("prefetch_size"), 0))) prefetch_size = SvIV(*v);
+      if(NULL != (v = hv_fetch(args, "prefetch_count", strlen("prefetch_count"), 0))) prefetch_count = SvIV(*v);
+      if(NULL != (v = hv_fetch(args, "global", strlen("global"), 0))) global = SvIV(*v) ? 1 : 0;
+    }
+    amqp_basic_qos(conn, channel, 
+                   prefetch_size, prefetch_count, global);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Basic QoS");
