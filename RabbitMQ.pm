@@ -276,9 +276,9 @@ C<$channel> is a channel that has been opened with C<channel_open>.
 
 Rollback a server-side (tx) transaction over $channel.
 
-=back
-
 =item basic_qos($channel, $options)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
 
 C<$options> is an optional hash respecting the following keys:
 
@@ -289,6 +289,19 @@ C<$options> is an optional hash respecting the following keys:
      }
 
 Set quality of service flags on the current $channel.
+
+=item basic_return($channel, $subroutine)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$subroutine> is a perl coderef that takes two arguments:
+
+     $channel is the channel on which information is being returned.
+
+     $m the message which is a hash ref containing reply_code,
+     reply_text, exchange, and routing_key.
+
+=back
 
 =cut
 
