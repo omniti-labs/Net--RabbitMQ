@@ -307,7 +307,7 @@ net_rabbitmq_exchange_delete(conn, channel, exchange, options = NULL)
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Deleting exchange");
 
-SV *
+void
 net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
   Net::RabbitMQ conn
   int channel
@@ -322,7 +322,7 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
     int auto_delete = 1;
     amqp_table_t arguments = AMQP_EMPTY_TABLE;
     amqp_bytes_t queuename_b = AMQP_EMPTY_BYTES;
-  CODE:
+  PPCODE:
     if(queuename && strcmp(queuename, "")) queuename_b = amqp_cstring_bytes(queuename);
     if(options) {
       int_from_hv(options, passive);
@@ -335,9 +335,11 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
                                                     arguments);
     amqp_rpc_reply = amqp_get_rpc_reply();
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Declaring queue");
-    RETVAL = newSVpvn(r->queue.bytes, r->queue.len);
-  OUTPUT:
-    RETVAL
+    XPUSHs(sv_2mortal(newSVpvn(r->queue.bytes, r->queue.len)));
+    if(GIMME_V == G_ARRAY) {
+      XPUSHs(sv_2mortal(newSVuv(r->message_count)));
+      XPUSHs(sv_2mortal(newSVuv(r->consumer_count)));
+    }
 
 void
 net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = NULL)

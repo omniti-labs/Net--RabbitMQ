@@ -1,4 +1,4 @@
-use Test::More tests => 7;
+use Test::More tests => 8;
 use strict;
 
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
@@ -16,6 +16,8 @@ eval { $mq->queue_declare(1, "nr_test_hole", { passive => 0, durable => 1, exclu
 is($@, '', "queue_declare");
 eval { $mq->queue_bind(1, "nr_test_hole", "nr_test_x", "nr_test_route"); };
 is($@, '', "queue_bind");
+eval { 1 until($mq->get(1, "nr_test_hole")); };
+is($@, '', "drain queue");
 eval { $mq->publish(1, "nr_test_route", "Magic Payload", 
                        { exchange => "nr_test_x" },
                        {
