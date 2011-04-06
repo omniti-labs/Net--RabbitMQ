@@ -112,6 +112,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     result = amqp_simple_wait_frame(conn, &frame);
     if (result <= 0) break;
 
+    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
     if (frame.frame_type != AMQP_FRAME_HEADER)
       Perl_croak(aTHX_ "Unexpected header %d!", frame.frame_type);
 
