@@ -295,6 +295,12 @@ C<$options> is an optional hash respecting the following keys:
 
 Set quality of service flags on the current $channel.
 
+=item hearbeat()
+
+Send a hearbeat frame.  If you've connected with a heartbeat parameter,
+you must send a heartbeat periodically matching connection parameter or
+the server may snip the connection.
+
 =item basic_return($channel, $subroutine)
 
 C<$channel> is a channel that has been opened with C<channel_open>.

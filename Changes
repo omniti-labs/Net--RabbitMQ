@@ -1,3 +1,4 @@
+	* add a heartbeat method
 	* a hearbeat frame can be received in the internal_recv function
 		causing an unexpected failure consuming; these are now ignored.
 	* make queue_declare return message and consumer counts (additionally)

@@ -110,9 +110,9 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     }
 
     result = amqp_simple_wait_frame(conn, &frame);
+    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
     if (result <= 0) break;
 
-    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
     if (frame.frame_type != AMQP_FRAME_HEADER)
       Perl_croak(aTHX_ "Unexpected header %d!", frame.frame_type);
 
@@ -614,6 +614,17 @@ net_rabbitmq_DESTROY(conn)
     sockfd = amqp_get_sockfd(conn);
     if(sockfd >= 0) close(sockfd);
     amqp_destroy_connection(conn);
+
+void
+net_rabbitmq_heartbeat(conn)
+  Net::RabbitMQ conn
+  int channel
+  PREINIT:
+  amqp_frame_t f;
+  CODE:
+    f.frame_type = AMQP_FRAME_HEARTBEAT;
+    f.channel = 0;
+    amqp_send_frame(conn, &f);
 
 void
 net_rabbitmq_tx_select(conn, channel, args = NULL)
