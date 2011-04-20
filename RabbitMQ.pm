@@ -57,6 +57,7 @@ C<$options> is an optional hash respecting the following keys:
        channel_max => $cmax,    #default 0
        frame_max => $fmax,      #default 131072
        heartbeat => $hearbeat,  #default 0
+       timeout => $seconds      #default undef (no timeout)
      }
 
 =item disconnect()

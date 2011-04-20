@@ -91,8 +91,6 @@ int amqp_decode_table(amqp_bytes_t encoded,
   output->entries = amqp_pool_alloc(pool, num_entries * sizeof(amqp_table_entry_t));
   memcpy(output->entries, entries, num_entries * sizeof(amqp_table_entry_t));
 
-  free(entries);
-
   *offsetptr = offset;
   return 0;
 }
