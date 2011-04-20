@@ -1,3 +1,7 @@
+0.2.0 - Tue Apr 19 22:07:39 EDT 2011
+	* fixed memory leak in amqp_table
+	* add a connect timeout that both times out connect() calls and
+		sets SO_{SND.RCV}TIMEO on the socket
 	* add a heartbeat method
 	* a hearbeat frame can be received in the internal_recv function
 		causing an unexpected failure consuming; these are now ignored.
