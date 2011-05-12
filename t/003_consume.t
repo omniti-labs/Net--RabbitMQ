@@ -17,7 +17,7 @@ eval { $mq->consume(1, "nr_test_hole", {consumer_tag=>'ctag', no_local=>0,no_ack
 is($@, '', "consume");
 
 my $rv = {};
-eval { $rv = $mq->recv(); };
+eval { local $SIG{ALRM} = sub {die}; alarm 5; $rv = $mq->recv(); alarm 0};
 is($@, '', "recv");
 $rv->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($rv,
@@ -35,7 +35,7 @@ is_deeply($rv,
                 expiration => 'later',
                 message_id => 'ABC',
                 type => 'notmytype',
-                user_id => 'yoda',
+                user_id => 'guest',
                 app_id => 'idd',
                 delivery_mode => 1,
                 priority => 2,

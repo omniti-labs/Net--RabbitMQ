@@ -16,7 +16,7 @@ eval { $mq->queue_declare(1, "nr_test_hole", { passive => 0, durable => 1, exclu
 is($@, '', "queue_declare");
 eval { $mq->queue_bind(1, "nr_test_hole", "nr_test_x", "nr_test_route"); };
 is($@, '', "queue_bind");
-eval { 1 until($mq->get(1, "nr_test_hole")); };
+eval { 1 while($mq->get(1, "nr_test_hole")); };
 is($@, '', "drain queue");
 eval { $mq->publish(1, "nr_test_route", "Magic Payload", 
                        { exchange => "nr_test_x" },
@@ -28,7 +28,7 @@ eval { $mq->publish(1, "nr_test_route", "Magic Payload",
                         expiration => 'later',
                         message_id => 'ABC',
                         type => 'notmytype',
-                        user_id => 'yoda',
+                        user_id => 'guest',
                         app_id => 'idd',
                         delivery_mode => 1,
                         priority => 2,
