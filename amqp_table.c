@@ -89,6 +89,7 @@ int amqp_decode_table(amqp_bytes_t encoded,
 
   output->num_entries = num_entries;
   output->entries = amqp_pool_alloc(pool, num_entries * sizeof(amqp_table_entry_t));
+  output->size = num_entries;
   memcpy(output->entries, entries, num_entries * sizeof(amqp_table_entry_t));
 
   *offsetptr = offset;
@@ -167,4 +168,43 @@ int amqp_table_entry_cmp(void const *entry1, void const *entry2) {
   }
 
   return p1->key.len - p2->key.len;
+}
+
+void amqp_create_table(amqp_connection_state_t state,
+                       amqp_table_t *output,
+                       int initialSize) {
+
+  output->entries = amqp_pool_alloc(&state->frame_pool, initialSize * sizeof(amqp_table_entry_t));
+  output->size = initialSize;
+  output->num_entries = 0;
+}
+
+void amqp_table_add_string(amqp_connection_state_t state,
+                           amqp_table_t *output,
+                           amqp_bytes_t key,
+                           amqp_bytes_t value)
+{
+
+    if (output->num_entries == output->size)
+        return;
+
+    output->entries[output->num_entries].kind = 'S';
+    output->entries[output->num_entries].key = key;
+    output->entries[output->num_entries].value.bytes = value;
+    output->num_entries++;
+}
+
+void amqp_table_add_int(amqp_connection_state_t state,
+                        amqp_table_t *output,
+                        amqp_bytes_t key,
+                        int value)
+{
+
+    if (output->num_entries == output->size)
+        return;
+
+    output->entries[output->num_entries].kind = 'I';
+    output->entries[output->num_entries].key = key;
+    output->entries[output->num_entries].value.i32 = value;
+    output->num_entries++;
 }

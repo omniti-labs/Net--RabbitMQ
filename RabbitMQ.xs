@@ -545,6 +545,28 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
         properties.timestamp        = (uint64_t) SvIV(*v);
         properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
       }
+      if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
+        amqp_create_table(conn, &properties.headers, 10);
+        HV *headers;
+        HE *he;
+        I32 iter;
+        char *key;
+        I32 retlen;
+        SV  *value;
+
+        headers = (HV *)SvRV(*v);
+        hv_iterinit(headers);
+        while (NULL != (he = hv_iternext(headers))) {
+            key = hv_iterkey(he, &retlen);
+            value = hv_iterval(headers, he);
+            if (SvTYPE(value) == SVt_PV) {
+                amqp_table_add_string(conn, &properties.headers, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
+            } else if (SvTYPE(value) == SVt_IV) {
+                amqp_table_add_int(conn, &properties.headers, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
+            }
+        }
+        properties._flags |= AMQP_BASIC_HEADERS_FLAG;
+      }
     }
     rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b, mandatory, immediate, &properties, body_b);
     RETVAL = rv;
