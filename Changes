@@ -1,3 +1,6 @@
+0.2.1 - Wed May 18 07:31:18 EDT 2011
+	* fixed up tests.
+
 0.2.0 - Tue Apr 19 22:07:39 EDT 2011
 	* fixed memory leak in amqp_table
 	* add a connect timeout that both times out connect() calls and
