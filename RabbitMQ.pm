@@ -302,13 +302,9 @@ Send a hearbeat frame.  If you've connected with a heartbeat parameter,
 you must send a heartbeat periodically matching connection parameter or
 the server may snip the connection.
 
-=item basic_return($channel, $subroutine)
-
-C<$channel> is a channel that has been opened with C<channel_open>.
+=item basic_return($subroutine)
 
 C<$subroutine> is a perl coderef that takes two arguments:
-
-     $channel is the channel on which information is being returned.
 
      $m the message which is a hash ref containing reply_code,
      reply_text, exchange, and routing_key.
