@@ -306,6 +306,8 @@ the server may snip the connection.
 
 C<$subroutine> is a perl coderef that takes two arguments:
 
+     $channel is the channel on which the message is returned.
+
      $m the message which is a hash ref containing reply_code,
      reply_text, exchange, and routing_key.
 
