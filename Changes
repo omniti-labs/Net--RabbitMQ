@@ -1,0 +1,69 @@
+0.2.0 - Tue Apr 19 22:07:39 EDT 2011
+	* fixed memory leak in amqp_table
+	* add a connect timeout that both times out connect() calls and
+		sets SO_{SND.RCV}TIMEO on the socket
+	* add a heartbeat method
+	* a hearbeat frame can be received in the internal_recv function
+		causing an unexpected failure consuming; these are now ignored.
+	* make queue_declare return message and consumer counts (additionally)
+		when called in array context.
+
+0.1.9 - Mon Feb 14 23:02:58 EST 2011
+	* add a basic return callback registration point
+	* add basic qos support
+
+0.1.8 - Sat Oct  9 11:11:36 EDT 2010
+	* missed a gratuitous memory leak somehow
+
+0.1.7 - Sat Oct  9 09:10:31 EDT 2010
+	* amqp_exchange_delete prototype
+	* memory leak fix from Trevor Little
+
+0.1.6 - Sun Jul 18 10:02:36 PDT 2010
+	* fix for uninitialized exchange when no options are passed.
+	* add consumer tags and docs
+	* add delete_exchange from Richard Wallman
+	* enhance delete_exchange with if_unused and nowait options
+		from Brian Clapper
+
+0.1.5 - Thu Apr 22 11:44:52 EDT 2010
+	* support for properties from Bob Goldstein < bobg at uic dot edu >
+	* retarded and seemingly futile attempt to compensate for no pack Q
+
+0.1.4 - Thu Apr  8 00:18:13 EDT 2010
+	* another attempt at getting CPAN testers is_deeply to accept truth
+	* memory leak with basic consume
+
+0.1.3 - Tue Mar 30 11:21:13 EDT 2010
+	* allow support for overriding OPTIMIZE.
+		Sun C 5.10 SunOS_i386 2009/06/03 requires -xO1 in my tests.
+	* fix MANIFEST file.
+
+0.1.2 - Tue Mar 30 10:02:25 EDT 2010
+	* use perl's USE_ITHREADS as a define to enable thread safety or not.
+	* Fix some macro use that was certainly wrong yet gcc silently allowed.
+
+0.1.1 - Mon Feb 22 12:32:57 EST 2010
+	* [rt.cpan.org #53800] make distclean removes files needed for build
+	* manually encode the 64bit delivery_tag to work croass platform for poorly
+		configured perls (no 64bit ints)
+	* add a get method (amqp_basic_get)
+
+0.1.0 - Sun Jan 17 09:49:07 EST 2010
+	* Update test suite to use dev.rabbitmq.com by default; still overridden with MQHOST environment variable.
+	* Bumped minor release number as things seem happy and stable.
+
+0.0.4 - Tue Dec 29 16:52:45 EST 2009
+	* make the tests use pack 'LL' instead of 'Q' for those that compile there perls incorrectly or cannot afford enough bits to make Q happen.
+
+0.0.3 - Fri Dec 25 13:23:36 EST 2009
+	* added tests for the txn support
+	* fixed file descriptor leak
+
+0.0.2 - Thu Dec 19 03:00:00 EST 2009
+	* Thread safety added.
+	* txn support from Joshua Kronengold
+	* some docs bugs.
+
+0.0.0.1 - Thu Nov 12 15:46:46 EST 2009
+	* Initial release
