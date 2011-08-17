@@ -1,0 +1,7 @@
+/Makefile
+/RabbitMQ.c
+/blib
+/pm_to_blib
+/tags
+*.bs
+*.o
