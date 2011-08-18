@@ -1,4 +1,4 @@
-use Test::More tests => 4;
+use Test::More skip_all => "No portable way to ensure connection timeout", tests => 4;
 use strict;
 use Time::HiRes qw/gettimeofday tv_interval/;
 
