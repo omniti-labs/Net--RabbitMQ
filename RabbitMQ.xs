@@ -581,13 +581,17 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
         while (NULL != (he = hv_iternext(headers))) {
             key = hv_iterkey(he, &retlen);
             value = hv_iterval(headers, he);
-            if (SvTYPE(value) == SVt_PV) {
+
+            if (SvGMAGICAL(value))
+                mg_get(value);
+
+            if (SvPOK(value)) {
                 amqp_table_add_string(conn, &properties.headers, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
-            } else if (SvTYPE(value) == SVt_IV) {
+            } else if (SvIOK(value)) {
                 amqp_table_add_int(conn, &properties.headers, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
             } else {
                 Perl_croak( aTHX_ "Unsupported SvType for header value: %d", SvTYPE(value) );
-			}
+            }
         }
         properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
