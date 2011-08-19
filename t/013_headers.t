@@ -1,4 +1,4 @@
-use Test::More tests => 12;
+use Test::More tests => 13;
 use strict;
 
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
@@ -24,6 +24,16 @@ is($@, '', "queue_bind");
 my $headers = {
 	abc => 123,
 	def => 'xyx',
+	head3 => 3,
+	head4 => 4,
+	head5 => 5,
+	head6 => 6,
+	head7 => 7,
+	head8 => 8,
+	head9 => 9,
+	head10 => 10,
+	head11 => 11,
+	head12 => 12,
 };
 eval { $mq->publish( 1, "nr_test_route", "Header Test",
 		{ exchange => "nr_test_x" },

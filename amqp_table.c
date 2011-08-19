@@ -179,19 +179,35 @@ void amqp_create_table(amqp_connection_state_t state,
   output->num_entries = 0;
 }
 
+amqp_table_entry_t *amqp_table_add_entry( amqp_connection_state_t state,
+		amqp_table_t *table,
+		amqp_bytes_t key)
+{
+	amqp_table_entry_t *entry;
+
+    if (table->num_entries == table->size)
+	{
+		int new_size = table->size * 2;
+		amqp_table_entry_t *new_entries = amqp_pool_alloc( &state->frame_pool, new_size * sizeof(amqp_table_entry_t) );
+		memcpy( new_entries, table->entries, table->size * sizeof(amqp_table_entry_t) );
+		table->size = new_size;
+		table->entries = new_entries;
+	}
+
+	entry = &table->entries[table->num_entries];
+	table->num_entries++;
+	entry->key = key;
+	return entry;
+}
+
 void amqp_table_add_string(amqp_connection_state_t state,
                            amqp_table_t *output,
                            amqp_bytes_t key,
                            amqp_bytes_t value)
 {
-
-    if (output->num_entries == output->size)
-        return;
-
-    output->entries[output->num_entries].kind = 'S';
-    output->entries[output->num_entries].key = key;
-    output->entries[output->num_entries].value.bytes = value;
-    output->num_entries++;
+	amqp_table_entry_t *entry = amqp_table_add_entry( state, output, key );
+    entry->kind = 'S';
+    entry->value.bytes = value;
 }
 
 void amqp_table_add_int(amqp_connection_state_t state,
@@ -199,12 +215,7 @@ void amqp_table_add_int(amqp_connection_state_t state,
                         amqp_bytes_t key,
                         int value)
 {
-
-    if (output->num_entries == output->size)
-        return;
-
-    output->entries[output->num_entries].kind = 'I';
-    output->entries[output->num_entries].key = key;
-    output->entries[output->num_entries].value.i32 = value;
-    output->num_entries++;
+	amqp_table_entry_t *entry = amqp_table_add_entry( state, output, key );
+    entry->kind = 'I';
+    entry->value.i32 = value;
 }
