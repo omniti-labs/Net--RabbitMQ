@@ -1,5 +1,18 @@
-use Test::More tests => 13;
+use Test::More tests => 16;
 use strict;
+
+package TestBlessings;
+use overload
+	'""' => sub { uc ${$_[0]} },
+	;
+
+sub new {
+	my ($class, $self) = @_;
+
+	bless \$self, $class;
+}
+
+package main;
 
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
 $host = 'localhost'; # FIXME
@@ -56,3 +69,18 @@ diag Dumper($msg);
 is( exists $msg->{props}, 1, "Props exist" );
 is( exists $msg->{props}{headers}, 1, "Headers exist" );
 is_deeply( $msg->{props}{headers}, $headers, "Received headers" );
+
+$headers = {
+	blah => TestBlessings->new('foo'),
+};
+eval { $mq->publish( 1, "nr_test_route", "Header Test",
+		{ exchange => "nr_test_x" },
+		{ headers => $headers },
+	);
+};
+is( $@, '', 'publish with blessed header values' );
+
+eval { $msg = $mq->recv() };
+is( $@, '', 'recv from blessed header values' );
+
+is_deeply( $msg->{props}{headers}, $headers, "Received blessed headers" );

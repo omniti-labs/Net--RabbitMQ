@@ -489,7 +489,7 @@ net_rabbitmq_purge(conn, channel, queuename, no_wait = 0)
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Purging queue");
 
 int
-net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = NULL)
+net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = NULL)
   Net::RabbitMQ conn
   int channel
   HV *options;

@@ -13,6 +13,7 @@ build_requires:
 requires:
     ExtUtils::MakeMaker:  6.03
     Test::More:           0
+    Scalar::Util:         0
 no_index:
     directory:
         - t
