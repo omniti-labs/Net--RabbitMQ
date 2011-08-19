@@ -568,7 +568,6 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
         properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
       }
       if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
-        amqp_create_table(conn, &properties.headers, 10);
         HV *headers;
         HE *he;
         I32 iter;
@@ -577,6 +576,7 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
         SV  *value;
 
         headers = (HV *)SvRV(*v);
+        amqp_create_table(conn, &properties.headers, HvKEYS(headers));
         hv_iterinit(headers);
         while (NULL != (he = hv_iternext(headers))) {
             key = hv_iterkey(he, &retlen);
