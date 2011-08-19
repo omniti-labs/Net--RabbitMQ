@@ -171,7 +171,29 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
       hv_store(props, "timestamp", strlen("timestamp"),
                newSViv(p->timestamp), 0);
     }
+    if (p->_flags & AMQP_BASIC_HEADERS_FLAG) {
+      int i;
+      SV *val;
+      HV *headers = newHV();
+      hv_store( props, "headers", strlen("headers"), newRV_noinc((SV *)headers), 0 );
 
+      for( i=0; i < p->headers.num_entries; ++i ) {
+        if( p->headers.entries[i].kind == 'I' ) {
+          hv_store( headers,
+              p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
+              newSViv(p->headers.entries[i].value.i32),
+              0
+          );
+        }
+        else if( p->headers.entries[i].kind == 'S' ) {
+          hv_store( headers,
+              p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
+              newSVpvn( p->headers.entries[i].value.bytes.bytes, p->headers.entries[i].value.bytes.len),
+              0
+          );
+        }
+      }
+    }
 
     body_target = frame.payload.properties.body_size;
     body_received = 0;
