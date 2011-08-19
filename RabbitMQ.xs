@@ -585,7 +585,9 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
                 amqp_table_add_string(conn, &properties.headers, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
             } else if (SvTYPE(value) == SVt_IV) {
                 amqp_table_add_int(conn, &properties.headers, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
-            }
+            } else {
+                Perl_croak( aTHX_ "Unsupported SvType for header value: %d", SvTYPE(value) );
+			}
         }
         properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
