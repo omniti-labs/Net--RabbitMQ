@@ -1,4 +1,4 @@
-use Test::More tests => 19;
+use Test::More tests => 20;
 use strict;
 
 package TestBlessings;
@@ -33,6 +33,9 @@ is($@, '', "queue_declare");
 
 eval { $mq->queue_bind(1, "nr_test_hole", "nr_test_x", "nr_test_route"); };
 is($@, '', "queue_bind");
+
+eval { 1 while($mq->get(1, "nr_test_hole")); };
+is($@, '', "drain queue");
 
 my $headers = {
 	abc => 123,
