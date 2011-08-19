@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 11;
 use strict;
 
 my $dtag=(unpack("L",pack("N",1)) != 1)?'0100000000000000':'0000000000000001';
@@ -20,6 +20,7 @@ isnt($queuename, '', "queue_declare -> private name");
 eval { $mq->queue_bind(1, $queuename, "nr_test_x", "nr_test_q"); };
 is($@, '', "queue_bind");
 eval { $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr_test_x" }); };
+is($@, '', "publish");
 eval { $mq->consume(1, $queuename, {consumer_tag=>'ctag', no_local=>0,no_ack=>1,exclusive=>0}); };
 is($@, '', "consume");
 

@@ -321,14 +321,15 @@ C<$subroutine> is a perl coderef that takes two arguments:
 sub publish {
 	my ($self, $channel, $routing_key, $body, $options, $props) = @_;
 
-	if( $props ) {
-		# Do a shallow clone to avoid modifying variable passed by caller
-		$props = { %$props };
+	$options ||= {};
+	$props   ||= {};
 
-		# Convert blessed variables in headers to strings
-		if( $props->{headers} ) {
-			$props->{headers} = { map { blessed($_) ? "$_" : $_ } %{ $props->{headers} } };
-		}
+	# Do a shallow clone to avoid modifying variable passed by caller
+	$props = { %$props };
+
+	# Convert blessed variables in headers to strings
+	if( $props->{headers} ) {
+		$props->{headers} = { map { blessed($_) ? "$_" : $_ } %{ $props->{headers} } };
 	}
 
 	$self->_publish($channel, $routing_key, $body, $options, $props);
