@@ -172,6 +172,29 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
                newSViv(p->timestamp), 0);
     }
 
+    if (p->_flags & AMQP_BASIC_HEADERS_FLAG) {
+      int i;
+      SV *val;
+      HV *headers = newHV();
+      hv_store( props, "headers", strlen("headers"), newRV_noinc((SV *)headers), 0 );
+
+      for( i=0; i < p->headers.num_entries; ++i ) {
+        if( p->headers.entries[i].kind == 'I' ) {
+          hv_store( headers,
+              p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
+              newSViv(p->headers.entries[i].value.i32),
+              0
+          );
+        }
+        else if( p->headers.entries[i].kind == 'S' ) {
+          hv_store( headers,
+              p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
+              newSVpvn( p->headers.entries[i].value.bytes.bytes, p->headers.entries[i].value.bytes.len),
+              0
+          );
+        }
+      }
+    }
 
     body_target = frame.payload.properties.body_size;
     body_received = 0;
@@ -467,7 +490,7 @@ net_rabbitmq_purge(conn, channel, queuename, no_wait = 0)
     die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Purging queue");
 
 int
-net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = NULL)
+net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = NULL)
   Net::RabbitMQ conn
   int channel
   HV *options;
@@ -544,6 +567,34 @@ net_rabbitmq_publish(conn, channel, routing_key, body, options = NULL, props = N
       if (NULL != (v = hv_fetch(props, "timestamp", strlen("timestamp"), 0))) {
         properties.timestamp        = (uint64_t) SvIV(*v);
         properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
+      }
+      if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
+        HV *headers;
+        HE *he;
+        I32 iter;
+        char *key;
+        I32 retlen;
+        SV  *value;
+
+        headers = (HV *)SvRV(*v);
+        amqp_create_table(conn, &properties.headers, HvKEYS(headers));
+        hv_iterinit(headers);
+        while (NULL != (he = hv_iternext(headers))) {
+            key = hv_iterkey(he, &retlen);
+            value = hv_iterval(headers, he);
+
+            if (SvGMAGICAL(value))
+                mg_get(value);
+
+            if (SvPOK(value)) {
+                amqp_table_add_string(conn, &properties.headers, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
+            } else if (SvIOK(value)) {
+                amqp_table_add_int(conn, &properties.headers, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
+            } else {
+                Perl_croak( aTHX_ "Unsupported SvType for header value: %d", SvTYPE(value) );
+            }
+        }
+        properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
     }
     rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b, mandatory, immediate, &properties, body_b);
