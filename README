@@ -1,3 +1,5 @@
+Code: https://github.com/omniti-labs/Net--RabbitMQ
+
 You can install this using in the usual Perl fashion:
 
 	perl Makefile.PL

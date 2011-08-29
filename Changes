@@ -1,4 +1,6 @@
  -
+	* note https://github.com/omniti-labs/Net--RabbitMQ as the
+		authoritative repository.
 	* set and get header proporties from Andy Wick
 
 0.2.1 - Wed May 18 07:31:18 EDT 2011
