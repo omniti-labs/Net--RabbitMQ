@@ -26,6 +26,7 @@ typedef struct amqp_decimal_t_ {
 
 typedef struct amqp_table_t_ {
   int num_entries;
+  int size;
   struct amqp_table_entry_t_ *entries;
 } amqp_table_t;
 

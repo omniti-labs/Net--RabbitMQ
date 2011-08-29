@@ -8,6 +8,7 @@ $VERSION = "0.2.1";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
+use Scalar::Util qw(blessed);
 
 =head1 NAME
 
@@ -314,5 +315,22 @@ C<$subroutine> is a perl coderef that takes two arguments:
 =back
 
 =cut
+
+sub publish {
+	my ($self, $channel, $routing_key, $body, $options, $props) = @_;
+
+	$options ||= {};
+	$props   ||= {};
+
+	# Do a shallow clone to avoid modifying variable passed by caller
+	$props = { %$props };
+
+	# Convert blessed variables in headers to strings
+	if( $props->{headers} ) {
+		$props->{headers} = { map { blessed($_) ? "$_" : $_ } %{ $props->{headers} } };
+	}
+
+	$self->_publish($channel, $routing_key, $body, $options, $props);
+}
 
 1;
