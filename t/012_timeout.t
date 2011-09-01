@@ -2,7 +2,7 @@ use Test::More tests => 4;
 use strict;
 use Time::HiRes qw/gettimeofday tv_interval/;
 
-my $host = '127.0.1.2';
+my $host = '199.15.224.0'; # This OmniTI IP will hang
 $SIG{'PIPE'} = 'IGNORE';
 use_ok('Net::RabbitMQ');
 
