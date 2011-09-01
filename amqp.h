@@ -1,6 +1,8 @@
 #ifndef librabbitmq_amqp_h
 #define librabbitmq_amqp_h
 
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
