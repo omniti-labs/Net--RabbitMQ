@@ -413,8 +413,12 @@ net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = N
     amqp_rpc_reply_t *amqp_rpc_reply;
     amqp_table_t arguments = AMQP_EMPTY_TABLE;
   CODE:
-    if(queuename == NULL || exchange == NULL || bindingkey == NULL)
-      Perl_croak(aTHX_ "queuename, exchange and bindingkey must all be specified");
+    if(queuename == NULL || exchange == NULL)
+      Perl_croak(aTHX_ "queuename and exchange must both be specified");
+    if(bindingkey == NULL && args == NULL)
+      Perl_croak(aTHX_ "bindingkey or args must be specified");
+    if(args)
+      hash_to_amqp_table(conn, args, &arguments);
     amqp_queue_bind(conn, channel, amqp_cstring_bytes(queuename),
                     amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
@@ -434,8 +438,12 @@ net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args =
     amqp_rpc_reply_t *amqp_rpc_reply;
     amqp_table_t arguments = AMQP_EMPTY_TABLE;
   CODE:
-    if(queuename == NULL || exchange == NULL || bindingkey == NULL)
-      Perl_croak(aTHX_ "queuename, exchange and bindingkey must all be specified");
+    if(queuename == NULL || exchange == NULL)
+      Perl_croak(aTHX_ "queuename and exchange must both be specified");
+    if(bindingkey == NULL && args == NULL)
+      Perl_croak(aTHX_ "bindingkey or args must be specified");
+    if(args)
+      hash_to_amqp_table(conn, args, &arguments);
     amqp_queue_unbind(conn, channel, amqp_cstring_bytes(queuename),
                       amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
