@@ -225,6 +225,32 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
   return result;
 }
 
+void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *table) {
+  HE   *he;
+  char *key;
+  SV   *value;
+  I32  retlen;
+
+  amqp_create_table(conn, table, HvKEYS(hash));
+
+  hv_iterinit(hash);
+  while (NULL != (he = hv_iternext(hash))) {
+    key = hv_iterkey(he, &retlen);
+    value = hv_iterval(hash, he);
+
+    if (SvGMAGICAL(value))
+      mg_get(value);
+
+    if (SvPOK(value)) {
+      amqp_table_add_string(conn, table, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
+    } else if (SvIOK(value)) {
+      amqp_table_add_int(conn, table, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
+    } else {
+      Perl_croak( aTHX_ "Unsupported SvType for hash value: %d", SvTYPE(value) );
+    }
+  }
+}
+
 MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
 
 REQUIRE:        1.9505
@@ -569,31 +595,7 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
         properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
       }
       if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
-        HV *headers;
-        HE *he;
-        I32 iter;
-        char *key;
-        I32 retlen;
-        SV  *value;
-
-        headers = (HV *)SvRV(*v);
-        amqp_create_table(conn, &properties.headers, HvKEYS(headers));
-        hv_iterinit(headers);
-        while (NULL != (he = hv_iternext(headers))) {
-            key = hv_iterkey(he, &retlen);
-            value = hv_iterval(headers, he);
-
-            if (SvGMAGICAL(value))
-                mg_get(value);
-
-            if (SvPOK(value)) {
-                amqp_table_add_string(conn, &properties.headers, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
-            } else if (SvIOK(value)) {
-                amqp_table_add_int(conn, &properties.headers, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
-            } else {
-                Perl_croak( aTHX_ "Unsupported SvType for header value: %d", SvTYPE(value) );
-            }
-        }
+        hash_to_amqp_table(conn, (HV *)SvRV(*v), &properties.headers);
         properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
     }
