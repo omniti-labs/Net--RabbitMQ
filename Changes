@@ -1,5 +1,6 @@
 0.2.3 -
 	* fix a few documentation typos
+	* support binding to an exchange with headers (RabbitMQ feature)
 
 0.2.2 - Mon Aug 29 15:13:31 EDT 2011
 	* note https://github.com/omniti-labs/Net--RabbitMQ as the
