@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.2.2";
+$VERSION = "0.2.3";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -26,8 +26,8 @@ Net::RabbitMQ - interact with RabbitMQ over AMQP using librabbitmq
 =head1 DESCRIPTION
 
 C<Net::RabbitMQ> provides a simple wrapper around the librabbitmq library
-that allows connecting, delcaring exchanges and queues, binding and unbinding
-queues, publising, consuming and receiving events.
+that allows connecting, declaring exchanges and queues, binding and unbinding
+queues, publishing, consuming and receiving events.
 
 Error handling in this module is primarily achieve by Perl_croak (die). You
 should be making good use of eval around these methods to ensure that you
@@ -263,7 +263,7 @@ C<$channel> is a channel that has been opened with C<channel_open>.
 C<$queuename> is the queue to be purged.
 
 C<$no_wait> a boolean specifying if the call should not wait for
-the server to acknowledge the acknoledgement.
+the server to acknowledge the acknowledgement.
 
 =item tx_select($channel)
 
