@@ -390,6 +390,8 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
       int_from_hv(options, exclusive);
       int_from_hv(options, auto_delete);
     }
+    if(args)
+      hash_to_amqp_table(conn, args, &arguments);
     amqp_queue_declare_ok_t *r = amqp_queue_declare(conn, channel, queuename_b, passive,
                                                     durable, exclusive, auto_delete,
                                                     arguments);
