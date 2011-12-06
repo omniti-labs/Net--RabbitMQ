@@ -274,6 +274,17 @@ C<$queuename> is the queue to be purged.
 C<$no_wait> a boolean specifying if the call should not wait for
 the server to acknowledge the acknowledgement.
 
+
+=item reject($channel, $delivery_tag, $requeue = 0)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$delivery_tag> the delivery tag seen from a returned frame from the
+C<recv> method.
+
+C<$requeue> specifies if the message should be requeued.
+
+
 =item tx_select($channel)
 
 C<$channel> is a channel that has been opened with C<channel_open>.
