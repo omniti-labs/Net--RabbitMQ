@@ -232,6 +232,22 @@ int amqp_basic_ack(amqp_connection_state_t state,
   return 0;
 }
 
+
+int amqp_basic_reject(amqp_connection_state_t state,
+                   amqp_channel_t channel,
+                   uint64_t delivery_tag,
+                   amqp_boolean_t requeue)
+{
+  amqp_basic_reject_t m =
+    (amqp_basic_reject_t) {
+      .delivery_tag = delivery_tag,
+      .requeue = requeue
+    };
+  AMQP_CHECK_RESULT(amqp_send_method(state, channel, AMQP_BASIC_REJECT_METHOD, &m));
+  return 0;
+}
+
+
 amqp_queue_purge_ok_t *amqp_queue_purge(amqp_connection_state_t state,
 						amqp_channel_t channel,
 						amqp_bytes_t queue,
