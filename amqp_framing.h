@@ -146,12 +146,12 @@ typedef struct amqp_channel_flow_ok_t_ {
 } amqp_channel_flow_ok_t;
 
 #define AMQP_CHANNEL_CLOSE_METHOD ((amqp_method_number_t) 0x00140028) /* 20, 40; 1310760 */
-typedef struct amqp_channel_close_t_ {
+struct amqp_channel_close_t_ {
   uint16_t reply_code;
   amqp_bytes_t reply_text;
   uint16_t class_id;
   uint16_t method_id;
-} amqp_channel_close_t;
+};
 
 #define AMQP_CHANNEL_CLOSE_OK_METHOD ((amqp_method_number_t) 0x00140029) /* 20, 41; 1310761 */
 typedef struct amqp_channel_close_ok_t_ {
@@ -358,12 +358,12 @@ typedef struct amqp_basic_publish_t_ {
 } amqp_basic_publish_t;
 
 #define AMQP_BASIC_RETURN_METHOD ((amqp_method_number_t) 0x003C0032) /* 60, 50; 3932210 */
-typedef struct amqp_basic_return_t_ {
+struct amqp_basic_return_t_ {
   uint16_t reply_code;
   amqp_bytes_t reply_text;
   amqp_bytes_t exchange;
   amqp_bytes_t routing_key;
-} amqp_basic_return_t;
+};
 
 #define AMQP_BASIC_DELIVER_METHOD ((amqp_method_number_t) 0x003C003C) /* 60, 60; 3932220 */
 typedef struct amqp_basic_deliver_t_ {
@@ -549,7 +549,7 @@ typedef struct amqp_confirm_properties_t_ {
 
 RABBITMQ_EXPORT amqp_channel_open_ok_t *amqp_channel_open(amqp_connection_state_t state, amqp_channel_t channel);
 RABBITMQ_EXPORT amqp_channel_flow_ok_t *amqp_channel_flow(amqp_connection_state_t state, amqp_channel_t channel, amqp_boolean_t active);
-RABBITMQ_EXPORT amqp_exchange_declare_ok_t *amqp_exchange_declare(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t exchange, amqp_bytes_t type, amqp_boolean_t passive, amqp_boolean_t durable, amqp_table_t arguments);
+RABBITMQ_EXPORT amqp_exchange_declare_ok_t *amqp_exchange_declare(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t exchange, amqp_bytes_t type, amqp_boolean_t passive, amqp_boolean_t durable, amqp_boolean_t auto_delete, amqp_table_t arguments);
 RABBITMQ_EXPORT amqp_exchange_delete_ok_t *amqp_exchange_delete(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t exchange, amqp_boolean_t if_unused);
 RABBITMQ_EXPORT amqp_exchange_bind_ok_t *amqp_exchange_bind(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t destination, amqp_bytes_t source, amqp_bytes_t routing_key, amqp_table_t arguments);
 RABBITMQ_EXPORT amqp_exchange_unbind_ok_t *amqp_exchange_unbind(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t destination, amqp_bytes_t source, amqp_bytes_t routing_key, amqp_table_t arguments);

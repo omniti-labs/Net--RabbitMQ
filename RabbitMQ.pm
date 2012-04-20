@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.2.4";
+$VERSION = "0.2.5";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -58,6 +58,7 @@ C<$options> is an optional hash respecting the following keys:
        channel_max => $cmax,    #default 0
        frame_max => $fmax,      #default 131072
        heartbeat => $hearbeat,  #default 0
+       timeout => $seconds      #default undef (no timeout)
      }
 
 =item disconnect()
@@ -88,6 +89,7 @@ C<$options> is an optional hash respecting the following keys:
        exchange_type => $type,  #default 'direct'
        passive => $boolean,     #default 0
        durable => $boolean,     #default 0
+       auto_delete => $boolean, #default 1
      }
 
 =item exchange_delete($channel, $exchange, $options)
@@ -301,6 +303,28 @@ Set quality of service flags on the current $channel.
 Send a hearbeat frame.  If you've connected with a heartbeat parameter,
 you must send a heartbeat periodically matching connection parameter or
 the server may snip the connection.
+
+=item basic_return($subroutine)
+
+C<$subroutine> is a perl coderef that takes two arguments:
+ 
+     $channel is the channel on which the message is returned.
+ 
+     $m the message which is a hash ref containing reply_code,
+     reply_text, exchange, and routing_key.
+
+=back
+
+=item channel_close_cb($subroutine)
+
+C<$subroutine> is a perl coderef that takes two arguments:
+
+$channel is the channel on which the message is returned.
+
+$m the message which is a hash ref containing reply_code,
+reply_text, class_id, and method_id.
+
+=back
 
 =cut
 

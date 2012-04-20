@@ -132,6 +132,12 @@ struct amqp_connection_state_t_ {
   amqp_link_t *last_queued_frame;
 
   amqp_rpc_reply_t most_recent_api_result;
+
+  amqp_basic_return_fn_t basic_return_callback;
+  void *basic_return_callback_data;
+
+  amqp_channel_close_fn_t channel_close_callback;
+  void *channel_close_callback_data;
 };
 
 static inline void *amqp_offset(void *data, size_t offset)

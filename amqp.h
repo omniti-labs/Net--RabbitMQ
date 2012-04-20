@@ -223,6 +223,14 @@ typedef enum amqp_sasl_method_enum_ {
   AMQP_SASL_METHOD_PLAIN = 0
 } amqp_sasl_method_enum;
 
+typedef int (*amqp_output_fn_t)(void *context, void *buffer, size_t count);
+typedef struct amqp_basic_return_t_ amqp_basic_return_t;
+typedef void (*amqp_basic_return_fn_t)(amqp_channel_t, amqp_basic_return_t *,
+				       void *);
+typedef struct amqp_channel_close_t_ amqp_channel_close_t;
+typedef void (*amqp_channel_close_fn_t)(amqp_channel_t, amqp_channel_close_t *,
+				        void *);
+
 /* Opaque struct. */
 typedef struct amqp_connection_state_t_ *amqp_connection_state_t;
 
@@ -256,6 +264,12 @@ RABBITMQ_EXPORT amqp_connection_state_t amqp_new_connection(void);
 RABBITMQ_EXPORT int amqp_get_sockfd(amqp_connection_state_t state);
 RABBITMQ_EXPORT void amqp_set_sockfd(amqp_connection_state_t state,
 				     int sockfd);
+RABBITMQ_EXPORT void amqp_set_basic_return_cb(amqp_connection_state_t state,
+					      amqp_basic_return_fn_t fn,
+					      void *data);
+RABBITMQ_EXPORT void amqp_set_channel_close_cb(amqp_connection_state_t state,
+					       amqp_channel_close_fn_t fn,
+					       void *data);
 RABBITMQ_EXPORT int amqp_tune_connection(amqp_connection_state_t state,
 					 int channel_max,
 					 int frame_max,
@@ -276,15 +290,23 @@ RABBITMQ_EXPORT void amqp_maybe_release_buffers(amqp_connection_state_t state);
 
 RABBITMQ_EXPORT int amqp_send_frame(amqp_connection_state_t state,
 				    amqp_frame_t const *frame);
-
+RABBITMQ_EXPORT int amqp_send_frame_to(amqp_connection_state_t state,
+				       amqp_frame_t const *frame,
+				       amqp_output_fn_t fn,
+				       void *context);
+    
 RABBITMQ_EXPORT int amqp_table_entry_cmp(void const *entry1,
 					 void const *entry2);
 
 RABBITMQ_EXPORT int amqp_open_socket(char const *hostname,
-				     int portnumber);
+				     int portnumber,
+				     struct timeval *timeout);
 
 RABBITMQ_EXPORT int amqp_send_header(amqp_connection_state_t state);
-
+RABBITMQ_EXPORT int amqp_send_header_to(amqp_connection_state_t state,
+					amqp_output_fn_t fn,
+					void *context);
+    
 RABBITMQ_EXPORT amqp_boolean_t amqp_frames_enqueued(
                                                amqp_connection_state_t state);
 

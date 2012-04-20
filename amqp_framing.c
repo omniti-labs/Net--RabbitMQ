@@ -1872,7 +1872,7 @@ amqp_channel_flow_ok_t *amqp_channel_flow(amqp_connection_state_t state, amqp_ch
 }
 
 
-amqp_exchange_declare_ok_t *amqp_exchange_declare(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t exchange, amqp_bytes_t type, amqp_boolean_t passive, amqp_boolean_t durable, amqp_table_t arguments)
+amqp_exchange_declare_ok_t *amqp_exchange_declare(amqp_connection_state_t state, amqp_channel_t channel, amqp_bytes_t exchange, amqp_bytes_t type, amqp_boolean_t passive, amqp_boolean_t durable, amqp_boolean_t auto_delete, amqp_table_t arguments)
 {
   amqp_exchange_declare_t req;
   req.ticket = 0;

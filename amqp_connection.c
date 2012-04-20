@@ -179,6 +179,18 @@ static size_t consume_data(amqp_connection_state_t state,
   return bytes_consumed;
 }
 
+void amqp_set_basic_return_cb(amqp_connection_state_t state,
+                              amqp_basic_return_fn_t f, void *data) {
+    state->basic_return_callback = f;
+    state->basic_return_callback_data = data;
+}
+
+void amqp_set_channel_close_cb(amqp_connection_state_t state,
+                               amqp_channel_close_fn_t f, void *data) {
+    state->channel_close_callback = f;
+    state->channel_close_callback_data = data;
+}
+
 int amqp_handle_input(amqp_connection_state_t state,
 		      amqp_bytes_t received_data,
 		      amqp_frame_t *decoded_frame)
@@ -312,6 +324,22 @@ int amqp_handle_input(amqp_connection_state_t state,
     }
 
     return_to_idle(state);
+
+    if (decoded_frame->frame_type == AMQP_FRAME_METHOD) {
+        if (decoded_frame->payload.method.id == AMQP_BASIC_RETURN_METHOD) {
+	  amqp_basic_return_t *m = decoded_frame->payload.method.decoded;
+	  if(state->basic_return_callback)
+	      state->basic_return_callback(decoded_frame->channel, m,
+					   state->basic_return_callback_data);
+	}
+	else if (decoded_frame->payload.method.id == AMQP_CHANNEL_CLOSE_METHOD) {
+	    amqp_channel_close_t *m = decoded_frame->payload.method.decoded;
+	    if (state->channel_close_callback)
+		state->channel_close_callback(decoded_frame->channel, m,
+					      state->channel_close_callback_data);
+	}
+    }
+      
     return bytes_consumed;
   }
 
