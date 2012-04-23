@@ -1,119 +1,141 @@
+/*
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License
+ * at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is librabbitmq.
+ *
+ * The Initial Developer of the Original Code is VMware, Inc.
+ * Portions created by VMware are Copyright (c) 2007-2012 VMware, Inc.
+ *
+ * Portions created by Tony Garnock-Jones are Copyright (c) 2009-2010
+ * VMware, Inc. and Tony Garnock-Jones.
+ *
+ * All rights reserved.
+ *
+ * Alternatively, the contents of this file may be used under the terms
+ * of the GNU General Public License Version 2 or later (the "GPL"), in
+ * which case the provisions of the GPL are applicable instead of those
+ * above. If you wish to allow use of your version of this file only
+ * under the terms of the GPL, and not to allow others to use your
+ * version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the
+ * notice and other provisions required by the GPL. If you do not
+ * delete the provisions above, a recipient may use your version of
+ * this file under the terms of any one of the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK *****
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <assert.h>
 
 #include "amqp.h"
 #include "amqp_framing.h"
 #include "amqp_private.h"
 
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
-
-#include <assert.h>
 
 int amqp_open_socket(char const *hostname,
-		     int portnumber, struct timeval *timeout)
+		     int portnumber,
+		     struct timeval *timeout)
 {
-  int result = -1;
-  int sockfd;
-  int flags;
-  struct sockaddr_in addr;
-  struct hostent *he;
-
-  he = gethostbyname(hostname);
-  if (he == NULL) {
-    return -ENOENT;
-  }
-
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(portnumber);
-  addr.sin_addr.s_addr = * (uint32_t *) he->h_addr_list[0];
-
-  sockfd = socket(PF_INET, SOCK_STREAM, 0);
-  if(((flags = fcntl(sockfd, F_GETFL, 0)) == -1) ||
-     (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)) {
-    result = -errno;
-    close(sockfd);
-    return -1;
-  }
-
-  if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-    result = -errno;
-    if(errno == EINPROGRESS) {
-      int aerrno, prv;
-      socklen_t aerrno_len = sizeof(aerrno);
-      struct pollfd pfd;
-
-      pfd.fd = sockfd;
-      pfd.events = POLLOUT;
-      prv = poll(&pfd, 1, timeout?(timeout->tv_sec*1000 + timeout->tv_usec/1000):-1);
-      if(prv == 1) {
-        if(getsockopt(sockfd,SOL_SOCKET,SO_ERROR, &aerrno, &aerrno_len) == 0) {
-          if(aerrno == 0) goto good;
-        }
-        else
-          goto good;
-        result = -aerrno;
-      }
-      else result = -ETIMEDOUT;
+    int result = -1;
+    int sockfd;
+    int flags;
+    struct sockaddr_in addr;
+    struct hostent *he;
+    
+    he = gethostbyname(hostname);
+    if (he == NULL) {
+	return -ENOENT;
     }
-    close(sockfd);
-    return result;
-  }
+    
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(portnumber);
+    addr.sin_addr.s_addr = * (uint32_t *) he->h_addr_list[0];
+    
+    sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    if(((flags = fcntl(sockfd, F_GETFL, 0)) == -1) ||
+       (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)) {
+	result = -errno;
+	close(sockfd);
+	return -1;
+    }
+    
+    if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+	result = -errno;
+	if(errno == EINPROGRESS) {
+	    int aerrno, prv;
+	    socklen_t aerrno_len = sizeof(aerrno);
+	    struct pollfd pfd;
+	    
+	    pfd.fd = sockfd;
+	    pfd.events = POLLOUT;
+	    prv = poll(&pfd, 1, timeout?(timeout->tv_sec*1000 + timeout->tv_usec/1000):-1);
+	    if(prv == 1) {
+		if(getsockopt(sockfd,SOL_SOCKET,SO_ERROR, &aerrno, &aerrno_len) == 0) {
+		    if(aerrno == 0) goto good;
+		}
+		else
+		    goto good;
+		result = -aerrno;
+	    }
+	    else result = -ETIMEDOUT;
+	}
+	close(sockfd);
+	return result;
+    }
 good:
-  if(((flags = fcntl(sockfd, F_GETFL, 0)) == -1) ||
-     (fcntl(sockfd, F_SETFL, flags & ~O_NONBLOCK) == -1)) {
-    result = -errno;
-    close(sockfd);
-    return result;
-  }
-  if(timeout) {
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, timeout, sizeof(*timeout));
-    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, timeout, sizeof(*timeout));
-  }
-  return sockfd;
-}
-
-static char *header() {
-  static char header[8];
-  header[0] = 'A';
-  header[1] = 'M';
-  header[2] = 'Q';
-  header[3] = 'P';
-  header[4] = 1;
-  header[5] = 1;
-  header[6] = AMQP_PROTOCOL_VERSION_MAJOR;
-  header[7] = AMQP_PROTOCOL_VERSION_MINOR;
-  return header;
+    if(((flags = fcntl(sockfd, F_GETFL, 0)) == -1) ||
+       (fcntl(sockfd, F_SETFL, flags & ~O_NONBLOCK) == -1)) {
+	result = -errno;
+	close(sockfd);
+	return result;
+    }
+    if(timeout) {
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, timeout, sizeof(*timeout));
+	setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, timeout, sizeof(*timeout));
+    }
+    return sockfd;
 }
 
 int amqp_send_header(amqp_connection_state_t state) {
-  return write(state->sockfd, header(), 8);
-}
-
-int amqp_send_header_to(amqp_connection_state_t state,
-			amqp_output_fn_t fn,
-			void *context)
-{
-  return fn(context, header(), 8);
+  static const uint8_t header[8] = { 'A', 'M', 'Q', 'P', 0,
+				     AMQP_PROTOCOL_VERSION_MAJOR,
+				     AMQP_PROTOCOL_VERSION_MINOR,
+				     AMQP_PROTOCOL_VERSION_REVISION };
+  return send(state->sockfd, (void *)header, 8, 0);
 }
 
 static amqp_bytes_t sasl_method_name(amqp_sasl_method_enum method) {
+  amqp_bytes_t res;
+
   switch (method) {
-    case AMQP_SASL_METHOD_PLAIN: return (amqp_bytes_t) {.len = 5, .bytes = "PLAIN"};
-    default:
-      amqp_assert(0, "Invalid SASL method: %d", (int) method);
+  case AMQP_SASL_METHOD_PLAIN:
+    res.bytes = "PLAIN";
+    res.len = 5;
+    break;
+
+  default:
+    amqp_abort("Invalid SASL method: %d", (int) method);
   }
-  abort(); /* unreachable */
+
+  return res;
 }
 
 static amqp_bytes_t sasl_response(amqp_pool_t *pool,
@@ -128,15 +150,23 @@ static amqp_bytes_t sasl_response(amqp_pool_t *pool,
       size_t username_len = strlen(username);
       char *password = va_arg(args, char *);
       size_t password_len = strlen(password);
+      char *response_buf;
+
       amqp_pool_alloc_bytes(pool, strlen(username) + strlen(password) + 2, &response);
-      *BUF_AT(response, 0) = 0;
-      memcpy(((char *) response.bytes) + 1, username, username_len);
-      *BUF_AT(response, username_len + 1) = 0;
-      memcpy(((char *) response.bytes) + username_len + 2, password, password_len);
+      if (response.bytes == NULL)
+	/* We never request a zero-length block, because of the +2
+	   above, so a NULL here really is ENOMEM. */
+	return response;
+
+      response_buf = response.bytes;
+      response_buf[0] = 0;
+      memcpy(response_buf + 1, username, username_len);
+      response_buf[username_len + 1] = 0;
+      memcpy(response_buf + username_len + 2, password, password_len);
       break;
     }
     default:
-      amqp_assert(0, "Invalid SASL method: %d", (int) method);
+      amqp_abort("Invalid SASL method: %d", (int) method);
   }
 
   return response;
@@ -158,36 +188,37 @@ static int wait_frame_inner(amqp_connection_state_t state,
 			    amqp_frame_t *decoded_frame)
 {
   while (1) {
-    int result;
+    int res;
 
     while (amqp_data_in_buffer(state)) {
       amqp_bytes_t buffer;
       buffer.len = state->sock_inbound_limit - state->sock_inbound_offset;
       buffer.bytes = ((char *) state->sock_inbound_buffer.bytes) + state->sock_inbound_offset;
-      AMQP_CHECK_RESULT((result = amqp_handle_input(state, buffer, decoded_frame)));
-      state->sock_inbound_offset += result;
 
-      if (decoded_frame->frame_type != 0) {
+      res = amqp_handle_input(state, buffer, decoded_frame);
+      if (res < 0)
+	return res;
+
+      state->sock_inbound_offset += res;
+
+      if (decoded_frame->frame_type != 0)
 	/* Complete frame was read. Return it. */
-	return 1;
-      }
+	return 0;
 
       /* Incomplete or ignored frame. Keep processing input. */
-      assert(result != 0);
-    }	
-
-    result = read(state->sockfd,
-		  state->sock_inbound_buffer.bytes,
-		  state->sock_inbound_buffer.len);
-    if (result < 0) {
-      return -errno;
-    }
-    if (result == 0) {
-      /* EOF. */
-      return 0;
+      assert(res != 0);
     }
 
-    state->sock_inbound_limit = result;
+    res = recv(state->sockfd, state->sock_inbound_buffer.bytes,
+		  state->sock_inbound_buffer.len, 0);
+    if (res <= 0) {
+      if (res == 0)
+	return -ERROR_CONNECTION_CLOSED;
+      else
+	return -amqp_socket_error();
+    }
+
+    state->sock_inbound_limit = res;
     state->sock_inbound_offset = 0;
   }
 }
@@ -202,7 +233,7 @@ int amqp_simple_wait_frame(amqp_connection_state_t state,
       state->last_queued_frame = NULL;
     }
     *decoded_frame = *f;
-    return 1;
+    return 0;
   } else {
     return wait_frame_inner(state, decoded_frame);
   }
@@ -214,25 +245,27 @@ int amqp_simple_wait_method(amqp_connection_state_t state,
 			    amqp_method_t *output)
 {
   amqp_frame_t frame;
+  int res = amqp_simple_wait_frame(state, &frame);
+  if (res < 0)
+    return res;
 
-  AMQP_CHECK_EOF_RESULT(amqp_simple_wait_frame(state, &frame));
-  amqp_assert(frame.channel == expected_channel,
-	      "Expected 0x%08X method frame on channel %d, got frame on channel %d",
-	      expected_method,
-	      expected_channel,
-	      frame.channel);
-  amqp_assert(frame.frame_type == AMQP_FRAME_METHOD,
-	      "Expected 0x%08X method frame on channel %d, got frame type %d",
-	      expected_method,
-	      expected_channel,
-	      frame.frame_type);
-  amqp_assert(frame.payload.method.id == expected_method,
-	      "Expected method ID 0x%08X on channel %d, got ID 0x%08X",
-	      expected_method,
-	      expected_channel,
-	      frame.payload.method.id);
+  if (frame.channel != expected_channel)
+    amqp_abort("Expected 0x%08X method frame on channel %d, got frame on channel %d",
+	       expected_method,
+	       expected_channel,
+	       frame.channel);
+  if (frame.frame_type != AMQP_FRAME_METHOD)
+    amqp_abort("Expected 0x%08X method frame on channel %d, got frame type %d",
+	       expected_method,
+	       expected_channel,
+	       frame.frame_type);
+  if (frame.payload.method.id != expected_method)
+    amqp_abort("Expected method ID 0x%08X on channel %d, got ID 0x%08X",
+	       expected_method,
+	       expected_channel,
+	       frame.payload.method.id);
   *output = frame.payload.method;
-  return 1;
+  return 0;
 }
 
 int amqp_send_method(amqp_connection_state_t state,
@@ -272,7 +305,7 @@ amqp_rpc_reply_t amqp_simple_rpc(amqp_connection_state_t state,
   status = amqp_send_method(state, channel, request_id, decoded_request_method);
   if (status < 0) {
     result.reply_type = AMQP_RESPONSE_LIBRARY_EXCEPTION;
-    result.library_errno = -status;
+    result.library_error = -status;
     return result;
   }
 
@@ -281,9 +314,9 @@ amqp_rpc_reply_t amqp_simple_rpc(amqp_connection_state_t state,
 
   retry:
     status = wait_frame_inner(state, &frame);
-    if (status <= 0) {
+    if (status < 0) {
       result.reply_type = AMQP_RESPONSE_LIBRARY_EXCEPTION;
-      result.library_errno = -status;
+      result.library_error = -status;
       return result;
     }
 
@@ -302,9 +335,15 @@ amqp_rpc_reply_t amqp_simple_rpc(amqp_connection_state_t state,
 	    ||
 	       ((frame.channel == 0) &&
 		(frame.payload.method.id == AMQP_CONNECTION_CLOSE_METHOD))   ) ))
-    {	     
+    {
       amqp_frame_t *frame_copy = amqp_pool_alloc(&state->decoding_pool, sizeof(amqp_frame_t));
       amqp_link_t *link = amqp_pool_alloc(&state->decoding_pool, sizeof(amqp_link_t));
+
+      if (frame_copy == NULL || link == NULL) {
+	result.reply_type = AMQP_RESPONSE_LIBRARY_EXCEPTION;
+	result.library_error = ERROR_NO_MEMORY;
+	return result;
+      }
 
       *frame_copy = frame;
 
@@ -330,6 +369,32 @@ amqp_rpc_reply_t amqp_simple_rpc(amqp_connection_state_t state,
   }
 }
 
+void *amqp_simple_rpc_decoded(amqp_connection_state_t state,
+			      amqp_channel_t channel,
+			      amqp_method_number_t request_id,
+			      amqp_method_number_t reply_id,
+			      void *decoded_request_method)
+{
+  amqp_method_number_t replies[2];
+
+  replies[0] = reply_id;
+  replies[1] = 0;
+
+  state->most_recent_api_result = amqp_simple_rpc(state, channel,
+						  request_id, replies,
+						  decoded_request_method);
+  if (state->most_recent_api_result.reply_type == AMQP_RESPONSE_NORMAL)
+    return state->most_recent_api_result.reply.decoded;
+  else
+    return NULL;
+}
+
+amqp_rpc_reply_t amqp_get_rpc_reply(amqp_connection_state_t state)
+{
+  return state->most_recent_api_result;
+}
+
+
 static int amqp_login_inner(amqp_connection_state_t state,
 			    int channel_max,
 			    int frame_max,
@@ -337,6 +402,7 @@ static int amqp_login_inner(amqp_connection_state_t state,
 			    amqp_sasl_method_enum sasl_method,
 			    va_list vl)
 {
+  int res;
   struct timeval hb;
   amqp_method_t method;
   uint32_t server_frame_max;
@@ -350,13 +416,17 @@ static int amqp_login_inner(amqp_connection_state_t state,
   }
 
   amqp_send_header(state);
+    
+  res = amqp_simple_wait_method(state, 0, AMQP_CONNECTION_START_METHOD,
+				&method);
+  if (res < 0)
+    return res;
 
-  AMQP_CHECK_EOF_RESULT(amqp_simple_wait_method(state, 0, AMQP_CONNECTION_START_METHOD, &method));
   {
     amqp_connection_start_t *s = (amqp_connection_start_t *) method.decoded;
     if ((s->version_major != AMQP_PROTOCOL_VERSION_MAJOR) ||
 	(s->version_minor != AMQP_PROTOCOL_VERSION_MINOR)) {
-      return -EPROTOTYPE;
+      return -ERROR_INCOMPATIBLE_AMQP_VERSION;
     }
 
     /* TODO: check that our chosen SASL mechanism is in the list of
@@ -365,20 +435,43 @@ static int amqp_login_inner(amqp_connection_state_t state,
   }
 
   {
-    amqp_bytes_t response_bytes = sasl_response(&state->decoding_pool, sasl_method, vl);
-    amqp_connection_start_ok_t s =
-      (amqp_connection_start_ok_t) {
-        .client_properties = {.num_entries = 0, .entries = NULL},
-	.mechanism = sasl_method_name(sasl_method),
-	.response = response_bytes,
-	.locale = {.len = 5, .bytes = "en_US"}
-      };
-    AMQP_CHECK_RESULT(amqp_send_method(state, 0, AMQP_CONNECTION_START_OK_METHOD, &s));
+    amqp_table_entry_t properties[2];
+    amqp_connection_start_ok_t s;
+    amqp_bytes_t response_bytes = sasl_response(&state->decoding_pool,
+						sasl_method, vl);
+
+    if (response_bytes.bytes == NULL)
+      return -ERROR_NO_MEMORY;
+
+    properties[0].key = amqp_cstring_bytes("product");
+    properties[0].value.kind = AMQP_FIELD_KIND_UTF8;
+    properties[0].value.value.bytes
+      = amqp_cstring_bytes("rabbitmq-c");
+
+    properties[1].key = amqp_cstring_bytes("information");
+    properties[1].value.kind = AMQP_FIELD_KIND_UTF8;
+    properties[1].value.value.bytes
+      = amqp_cstring_bytes("See http://hg.rabbitmq.com/rabbitmq-c/");
+
+    s.client_properties.num_entries = 2;
+    s.client_properties.entries = properties;
+    s.mechanism = sasl_method_name(sasl_method);
+    s.response = response_bytes;
+    s.locale.bytes = "en_US";
+    s.locale.len = 5;
+
+    res = amqp_send_method(state, 0, AMQP_CONNECTION_START_OK_METHOD, &s);
+    if (res < 0)
+      return res;
   }
 
   amqp_release_buffers(state);
 
-  AMQP_CHECK_EOF_RESULT(amqp_simple_wait_method(state, 0, AMQP_CONNECTION_TUNE_METHOD, &method));
+  res = amqp_simple_wait_method(state, 0, AMQP_CONNECTION_TUNE_METHOD,
+				&method);
+  if (res < 0)
+    return res;
+
   {
     amqp_connection_tune_t *s = (amqp_connection_tune_t *) method.decoded;
     server_channel_max = s->channel_max;
@@ -386,38 +479,38 @@ static int amqp_login_inner(amqp_connection_state_t state,
     server_heartbeat = s->heartbeat;
   }
 
-  if (server_channel_max != 0 && server_channel_max < channel_max) {
+  if (server_channel_max != 0 && server_channel_max < channel_max)
     channel_max = server_channel_max;
-  }
 
-  if (server_frame_max != 0 && server_frame_max < frame_max) {
+  if (server_frame_max != 0 && server_frame_max < frame_max)
     frame_max = server_frame_max;
-  }
 
-  if (server_heartbeat != 0 && server_heartbeat < heartbeat) {
+  if (server_heartbeat != 0 && server_heartbeat < heartbeat)
     heartbeat = server_heartbeat;
-  }
   if(heartbeat != 0) {
     hb.tv_sec = 2*heartbeat; hb.tv_usec = 0;
     setsockopt(state->sockfd, SOL_SOCKET, SO_RCVTIMEO, &hb, sizeof(hb));
     setsockopt(state->sockfd, SOL_SOCKET, SO_SNDTIMEO, &hb, sizeof(hb));
   }
 
-  AMQP_CHECK_RESULT(amqp_tune_connection(state, channel_max, frame_max, heartbeat));
+  res = amqp_tune_connection(state, channel_max, frame_max, heartbeat);
+  if (res < 0)
+    return res;
 
   {
-    amqp_connection_tune_ok_t s =
-      (amqp_connection_tune_ok_t) {
-        .channel_max = channel_max,
-	.frame_max = frame_max,
-	.heartbeat = heartbeat
-      };
-    AMQP_CHECK_RESULT(amqp_send_method(state, 0, AMQP_CONNECTION_TUNE_OK_METHOD, &s));
+    amqp_connection_tune_ok_t s;
+    s.frame_max = frame_max;
+    s.channel_max = channel_max;
+    s.heartbeat = heartbeat;
+
+    res = amqp_send_method(state, 0, AMQP_CONNECTION_TUNE_OK_METHOD, &s);
+    if (res < 0)
+      return res;
   }
 
   amqp_release_buffers(state);
 
-  return 1;
+  return 0;
 }
 
 amqp_rpc_reply_t amqp_login(amqp_connection_state_t state,
@@ -430,27 +523,34 @@ amqp_rpc_reply_t amqp_login(amqp_connection_state_t state,
 {
   va_list vl;
   amqp_rpc_reply_t result;
+  int status;
 
   va_start(vl, sasl_method);
 
-  amqp_login_inner(state, channel_max, frame_max, heartbeat, sasl_method, vl);
+  status = amqp_login_inner(state, channel_max, frame_max, heartbeat, sasl_method, vl);
+  if (status < 0) {
+    result.reply_type = AMQP_RESPONSE_LIBRARY_EXCEPTION;
+    result.reply.id = 0;
+    result.reply.decoded = NULL;
+    result.library_error = -status;
+    return result;
+  }
 
   {
-    amqp_connection_open_t s =
-      (amqp_connection_open_t) {
-        .virtual_host = amqp_cstring_bytes(vhost),
-	.capabilities = {.len = 0, .bytes = NULL},
-	.insist = 1
-      };
     amqp_method_number_t replies[] = { AMQP_CONNECTION_OPEN_OK_METHOD, 0 };
+    amqp_connection_open_t s;
+    s.virtual_host = amqp_cstring_bytes(vhost);
+    s.capabilities.len = 0;
+    s.capabilities.bytes = NULL;
+    s.insist = 1;
+
     result = amqp_simple_rpc(state,
 			     0,
 			     AMQP_CONNECTION_OPEN_METHOD,
 			     (amqp_method_number_t *) &replies,
 			     &s);
-    if (result.reply_type != AMQP_RESPONSE_NORMAL) {
+    if (result.reply_type != AMQP_RESPONSE_NORMAL)
       return result;
-    }
   }
   amqp_maybe_release_buffers(state);
 
@@ -459,6 +559,6 @@ amqp_rpc_reply_t amqp_login(amqp_connection_state_t state,
   result.reply_type = AMQP_RESPONSE_NORMAL;
   result.reply.id = 0;
   result.reply.decoded = NULL;
-  result.library_errno = 0;
+  result.library_error = 0;
   return result;
 }
