@@ -1,4 +1,4 @@
-0.2.5 - Fri Apr 20 16:12:00 EET 2012
+0.2.5 - Mon Apr 23 11:04:00 EET 2012
 	* adding channel_close_cb.
 	* upgrading librabbitmq.
 	* fixing t/011_hearbeat.t
