@@ -7,10 +7,13 @@ my $cfiles = [ map { "amqp_$_.c" } @parts ];
 my $ofiles = join ' ', map { "amqp_$_.o" } @parts;
 
 WriteMakefile(
-        NAME            => 'Net::RabbitMQ',
-        VERSION_FROM    => 'RabbitMQ.pm',
-	OBJECT          => "RabbitMQ.o $ofiles",
+	NAME		=> 'Net::RabbitMQ',
+	VERSION_FROM	=> 'RabbitMQ.pm',
+	OBJECT		=> "RabbitMQ.o $ofiles",
 	C		=> $cfiles,
-	OPTIMIZE	=> $ENV{'OPTIMIZE'}
+	OPTIMIZE	=> $ENV{'OPTIMIZE'},
+	PREREQ_PM	=> {
+		'Variable::Magic' => '0',
+		},
         );
 
