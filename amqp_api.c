@@ -121,6 +121,7 @@ int amqp_basic_publish(amqp_connection_state_t state,
   amqp_basic_publish_t m;
   amqp_basic_properties_t default_properties;
 
+  m.ticket = 0;
   m.exchange = exchange;
   m.routing_key = routing_key;
   m.mandatory = mandatory;
