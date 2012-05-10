@@ -1,4 +1,4 @@
-use Test::More tests => 7;
+use Test::More tests => 6;
 use strict;
 use Data::Dumper;
 
@@ -23,7 +23,6 @@ $mq->basic_return(sub {
 });
 my $rv = 0;
 eval { $rv = $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr_test_x", "immediate" => 1, "mandatory" => 1 }); };
-is($rv, 0, "publish");
 diag "Sleeping for 1 seconds";
 sleep(1);
 eval { $rv = $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr_test_x", "immediate" => 1, "mandatory" => 1 }); };
