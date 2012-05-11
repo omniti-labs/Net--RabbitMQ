@@ -12,8 +12,5 @@ WriteMakefile(
 	OBJECT		=> "RabbitMQ.o $ofiles",
 	C		=> $cfiles,
 	OPTIMIZE	=> $ENV{'OPTIMIZE'},
-	PREREQ_PM	=> {
-		'Variable::Magic' => '0',
-		},
         );
 
