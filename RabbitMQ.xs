@@ -652,11 +652,10 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
       hv_store(hv, "exchange", strlen("exchange"), newSVpvn(ok->exchange.bytes, ok->exchange.len), 0);
       hv_store(hv, "routing_key", strlen("routing_key"), newSVpvn(ok->routing_key.bytes, ok->routing_key.len), 0);
       hv_store(hv, "message_count", strlen("message_count"), newSViv(ok->message_count), 0);
-      if(amqp_data_in_buffer(conn)) {
-        int rv;
-        rv = internal_recv(hv, conn, 1);
-        if(rv <= 0) Perl_croak(aTHX_ "Bad frame read.");
-      }
+      int rv;
+      rv = internal_recv(hv, conn, 1);
+      if(rv <= 0) Perl_croak(aTHX_ "Bad frame read.");
+      
       RETVAL = (SV *)newRV_noinc((SV *)hv);
     }
     else
