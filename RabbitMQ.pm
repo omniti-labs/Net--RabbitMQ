@@ -313,8 +313,6 @@ C<$subroutine> is a perl coderef that takes two arguments:
      $m the message which is a hash ref containing reply_code,
      reply_text, exchange, and routing_key.
 
-=back
-
 =item channel_close_cb($subroutine)
 
 C<$subroutine> is a perl coderef that takes two arguments:
