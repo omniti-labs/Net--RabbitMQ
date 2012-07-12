@@ -1,3 +1,6 @@
+0.2.5 -
+	* wish CPAN versioning made sense.
+
 0.2.4 -
 	* add basic reject (jpfrigerio)
 	* conditional variable::magic tests (mfowler)
