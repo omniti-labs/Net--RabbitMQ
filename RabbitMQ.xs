@@ -512,6 +512,25 @@ net_rabbitmq_ack(conn, channel, delivery_tag, multiple = 0)
     die_on_error(aTHX_ amqp_basic_ack(conn, channel, tag, multiple),
                  "ack");
 
+
+void
+net_rabbitmq_reject(conn, channel, delivery_tag, requeue = 0)
+ Net::RabbitMQ conn
+ int channel
+ SV *delivery_tag
+ int requeue
+ PREINIT:
+   STRLEN len;
+   uint64_t tag;
+   unsigned char *l;
+ CODE:
+   l = SvPV(delivery_tag, len);
+   if(len != sizeof(tag)) Perl_croak(aTHX_ "bad tag");
+   memcpy(&tag, l, sizeof(tag));
+   die_on_error(aTHX_ amqp_basic_reject(conn, channel, tag, requeue),
+                "reject");
+
+
 void
 net_rabbitmq_purge(conn, channel, queuename, no_wait = 0)
   Net::RabbitMQ conn
