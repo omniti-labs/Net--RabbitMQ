@@ -85,17 +85,17 @@ is( $@, '', 'recv from blessed header values' );
 
 is_deeply( $msg->{props}{headers}, $headers, "Received blessed headers" );
 
+
+
 SKIP: {
-	use Variable::Magic qw(wizard cast);
+	skip "Variable::Magic not available", 3
+		unless eval "use Variable::Magic qw(wizard cast); 1";
 
-	# Currently not able to get Variable::Magic to work without requiring it
-	#skip "Variable::Magic not available", 3 if $@;
-
-	my $wizard = wizard
+	my $wizard = wizard(
 		set => sub { },
-		;
+	);
 	my $magic = 'foo';
-	cast $magic, $wizard;
+	cast($magic, $wizard);
 	my $headers = { blah => $magic, };
 
 	eval { $mq->publish( 1, "nr_test_route", "Header Test",
