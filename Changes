@@ -1,3 +1,6 @@
+0.2.6 -
+	* make the heartbeat test a bit more tolerant (neophenix)
+
 0.2.5 -
 	* wish CPAN versioning made sense.
 
