@@ -134,6 +134,18 @@ In array context, this method returns three items: queuename,
 the number of message waiting on the queue, and the number
 of consumers bound to the queue.
 
+=item qeueu_delete($channel, $queuename, $options)
+
+C<$channel> is a channel that has been opened with C<channel_open>.
+
+C<$options> is an optional hash respecting the following keys:
+
+     {
+       if_unused => $boolean, #deafult 1
+       if_empty => $boolean,  #default 1
+       nowait => $boolean,    #default 0
+     }
+
 =item queue_bind($channel, $queuename, $exchange, $routing_key, $arguments)
 
 C<$channel> is a channel that has been opened with C<channel_open>.

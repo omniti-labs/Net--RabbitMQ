@@ -5,3 +5,5 @@
 /tags
 *.bs
 *.o
+debian*
+Makefile.old

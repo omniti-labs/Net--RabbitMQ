@@ -404,6 +404,27 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
     }
 
 void
+net_rabbitmq_queue_delete(conn, channel, queuename, options = NULL)
+    Net::RabbitMQ conn
+    int channel
+    char *queuename
+    HV *options
+    PREINIT:
+	amqp_rpc_reply_t *amqp_rpc_reply;
+        int if_unused = 1;
+        int if_empty = 1;
+        int nowait = 0;
+    CODE:
+	if(options) {
+    	    int_from_hv(options, if_unused);
+            int_from_hv(options, if_empty);
+    	    int_from_hv(options, nowait);
+    }
+    amqp_queue_delete(conn, channel, amqp_cstring_bytes(queuename), if_unused, if_empty, nowait);
+    amqp_rpc_reply = amqp_get_rpc_reply();
+    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Deleting queue");
+
+void
 net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = NULL)
   Net::RabbitMQ conn
   int channel
