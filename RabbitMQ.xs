@@ -656,10 +656,7 @@ net_rabbitmq_disconnect(conn)
   PREINIT:
     int sockfd;
   CODE:
-    die_on_amqp_error(aTHX_ amqp_connection_close(conn, AMQP_REPLY_SUCCESS), "Closing connection");
-    sockfd = amqp_get_sockfd(conn);
-    if(sockfd >= 0) close(sockfd);
-    amqp_set_sockfd(conn,-1);
+    amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
 
 Net::RabbitMQ
 net_rabbitmq_new(clazz)
@@ -676,8 +673,6 @@ net_rabbitmq_DESTROY(conn)
     int sockfd;
   CODE:
     amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
-    sockfd = amqp_get_sockfd(conn);
-    if(sockfd >= 0) close(sockfd);
     amqp_destroy_connection(conn);
 
 void

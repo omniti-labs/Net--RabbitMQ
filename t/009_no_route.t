@@ -1,6 +1,5 @@
 use Test::More tests => 10;
 use strict;
-use Data::Dumper;
 
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
 
