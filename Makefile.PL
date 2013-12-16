@@ -13,10 +13,9 @@ foreach ( <$Bin/*.c> ){
 }
 
 WriteMakefile(
-	NAME		    => 'Net::RabbitMQ',
-	VERSION_FROM	=> 'RabbitMQ.pm',
-	OBJECT		    => "RabbitMQ.o $ofiles",
-	OPTIMIZE	    => $ENV{'OPTIMIZE'},
-	PREREQ_PM	    => {},
-    LIBS            => ['-lrt'],
+    NAME            => 'Net::RabbitMQ',
+    VERSION_FROM    => 'RabbitMQ.pm',
+    OBJECT          => "RabbitMQ.o ${ofiles}",
+    OPTIMIZE        => $ENV{'OPTIMIZE'},
+    CCFLAGS         => "-I${Bin}",
 );

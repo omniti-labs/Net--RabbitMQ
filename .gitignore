@@ -11,3 +11,4 @@ MANIFEST
 *.swp
 *.old
 /RabbitMQ.c
+/Net-RabbitMQ*.tar*

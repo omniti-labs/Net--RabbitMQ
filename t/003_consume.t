@@ -20,8 +20,6 @@ my $rv = {};
 eval { local $SIG{ALRM} = sub {die}; alarm 5; $rv = $mq->recv(); alarm 0};
 is($@, '', "recv");
 
-use Data::Dumper;
-warn Dumper $rv;
 $rv->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($rv,
           {
