@@ -1,17 +1,19 @@
 require 5.004 ;
 use ExtUtils::MakeMaker 5.16 ;
 use Config ;
+use FindBin qw/$Bin/;
 
-my @parts = qw/api connection debug framing mem socket table/;
-my $cfiles = [ map { "amqp_$_.c" } @parts ];
-my $ofiles = join ' ', map { "amqp_$_.o" } @parts;
+my $rabbbitmqc_dir = "$Bin/rabbitmq-c/librabbitmq";
+my $cfiles = [<$rabbbitmqc_dir/*.c>];
+push @$cfiles, "$Bin/amqp_debug.c";
+my $ofiles = join ' ', map { $_ =~ s/\.c$/\.o/; $_ } @$cfiles;
 
 WriteMakefile(
-	NAME		=> 'Net::RabbitMQ',
+	NAME		    => 'Net::RabbitMQ',
 	VERSION_FROM	=> 'RabbitMQ.pm',
-	OBJECT		=> "RabbitMQ.o $ofiles",
-	C		=> $cfiles,
-	OPTIMIZE	=> $ENV{'OPTIMIZE'},
-	PREREQ_PM	=> {},
-        );
-
+	OBJECT		    => "RabbitMQ.o $ofiles",
+	C		        => $cfiles,
+	OPTIMIZE	    => $ENV{'OPTIMIZE'},
+    CCFLAGS          => "-I$rabbbitmqc_dir",
+	PREREQ_PM	    => {},
+);

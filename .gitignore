@@ -5,3 +5,8 @@
 /tags
 *.bs
 *.o
+META.*
+MYMETA.*
+MANIFEST
+*.swp
+*.old
