@@ -10,3 +10,4 @@ MYMETA.*
 MANIFEST
 *.swp
 *.old
+/RabbitMQ.c

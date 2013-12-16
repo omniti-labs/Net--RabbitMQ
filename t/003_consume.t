@@ -19,6 +19,9 @@ is($@, '', "consume");
 my $rv = {};
 eval { local $SIG{ALRM} = sub {die}; alarm 5; $rv = $mq->recv(); alarm 0};
 is($@, '', "recv");
+
+use Data::Dumper;
+warn Dumper $rv;
 $rv->{delivery_tag} =~ s/(.)/sprintf("%02x", ord($1))/esg;
 is_deeply($rv,
           {
@@ -32,7 +35,6 @@ is_deeply($rv,
                 content_encoding => 'none',
                 correlation_id => '123',
                 reply_to => 'somequeue',
-                expiration => 'later',
                 message_id => 'ABC',
                 type => 'notmytype',
                 user_id => 'guest',
