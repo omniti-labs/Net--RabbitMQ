@@ -4,6 +4,7 @@
 
 #include <amqp.h>
 #include <amqp_private.h>
+#include <amqp_tcp_socket.h>
 
 typedef amqp_connection_state_t Net__RabbitMQ;
 
@@ -275,7 +276,7 @@ net_rabbitmq_connect(conn, hostname, options)
   char *hostname
   HV *options
   PREINIT:
-    int sockfd;
+    amqp_socket_t *sock;
     char *user = "guest";
     char *password = "guest";
     char *vhost = "/";
@@ -298,14 +299,17 @@ net_rabbitmq_connect(conn, hostname, options)
      to.tv_sec = floor(timeout);
      to.tv_usec = 1000000.0 * (timeout - floor(timeout));
     }
+    sock = amqp_tcp_socket_new(conn);
 
-    die_on_error(aTHX_ sockfd = amqp_open_socket_noblock(hostname, port, (timeout<0)?NULL:&to), "Opening socket");
-    amqp_set_sockfd(conn, sockfd);
-    die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max,
-                                       heartbeat, AMQP_SASL_METHOD_PLAIN,
-                                       user, password),
-                      "Logging in");
-    RETVAL = sockfd;
+    if (!sock) {
+      Perl_croak("error creating TCP socket");
+    }
+
+    die_on_error(aTHX_ amqp_socket_open_noblock(sock, hostname, port, (timeout<0)?NULL:&to), "opening TCP socket");
+
+    die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max, heartbeat, AMQP_SASL_METHOD_PLAIN, user, password), "Logging in");
+
+    RETVAL = 1;
   OUTPUT:
     RETVAL
 
