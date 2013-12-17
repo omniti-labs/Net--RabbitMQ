@@ -256,9 +256,9 @@ void hash_to_amqp_table(HV *hash, amqp_table_t *table) {
       Perl_croak( aTHX_ "Unsupported SvType for hash value: %d", SvTYPE(value) );
     }
   }
-  table->num_entries = 8;
+  table->num_entries = i;
   table->entries = entries;
-  dump_table( table );
+dump_table( *table );
 }
 
 MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
@@ -608,6 +608,7 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
       }
       if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
         hash_to_amqp_table((HV *)SvRV(*v), &properties.headers);
+dump_table( properties.headers );
         properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
     }

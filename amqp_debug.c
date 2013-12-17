@@ -208,6 +208,4 @@ void dump_table(amqp_table_t table) {
   val.kind = AMQP_FIELD_KIND_TABLE;
   val.value.table = table;
   dump_value(0, val, stderr);
-
-  fclose(out);
 }

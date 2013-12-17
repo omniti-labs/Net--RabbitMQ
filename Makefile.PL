@@ -18,4 +18,5 @@ WriteMakefile(
     OBJECT          => "RabbitMQ.o ${ofiles}",
     OPTIMIZE        => $ENV{'OPTIMIZE'},
     CCFLAGS         => "-I${Bin}",
+    LIBS            =>['-lrt'],
 );
