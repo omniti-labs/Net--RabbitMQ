@@ -1,2 +1,0 @@
-#define AMQP_IMPL_VERSION "0.9.1"
-
