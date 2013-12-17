@@ -2,8 +2,8 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include "amqp.h"
-#include "amqp_framing.h"
+#include <amqp.h>
+#include <amqp_private.h>
 
 typedef amqp_connection_state_t Net__RabbitMQ;
 
@@ -186,7 +186,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
               0
           );
         }
-        else if( p->headers.entries[i].value.kind == AMQP_FIELD_KIND_BYTES ) {
+        else if( p->headers.entries[i].value.kind == AMQP_FIELD_KIND_UTF8 ) {
           hv_store( headers,
               p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
               newSVpvn( p->headers.entries[i].value.value.bytes.bytes, p->headers.entries[i].value.value.bytes.len),
@@ -225,14 +225,15 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
   return result;
 }
 
-void hash_to_amqp_table(HV *hash, amqp_table_t *table) {
+void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *table) {
   HE   *he;
   char *key;
   SV   *value;
   I32  retlen;
-  int i = 0;
+  amqp_table_entry_t *entry;
 
-  amqp_table_entry_t entries[HvKEYS(hash)];
+  amqp_table_entry_t *new_entries = amqp_pool_alloc( &conn->properties_pool, HvKEYS(hash) * sizeof(amqp_table_entry_t) );
+  table->entries = new_entries;
 
   hv_iterinit(hash);
   while (NULL != (he = hv_iternext(hash))) {
@@ -242,23 +243,25 @@ void hash_to_amqp_table(HV *hash, amqp_table_t *table) {
     if (SvGMAGICAL(value))
       mg_get(value);
 
+
     if (SvPOK(value)) {
-      entries[ i ].key = amqp_cstring_bytes(key);
-      entries[ i ].value.kind = AMQP_FIELD_KIND_UTF8;
-      entries[ i ].value.value.bytes = amqp_cstring_bytes(SvPV_nolen(value));
-      ++i;
+      entry = &table->entries[table->num_entries];
+      table->num_entries++;
+
+      entry->key = amqp_cstring_bytes(key);
+      entry->value.kind = AMQP_FIELD_KIND_UTF8;
+      entry->value.value.bytes = amqp_cstring_bytes(SvPV_nolen(value));
     } else if (SvIOK(value)) {
-      entries[ i ].key = amqp_cstring_bytes(key);
-      entries[ i ].value.kind = AMQP_FIELD_KIND_I32;
-      entries[ i ].value.value.i32 = (uint64_t) SvIV(value);
-      ++i;
+      entry = &table->entries[table->num_entries];
+      table->num_entries++;
+
+      entry->key = amqp_cstring_bytes(key);
+      entry->value.kind = AMQP_FIELD_KIND_I32;
+      entry->value.value.i32 = (uint64_t) SvIV(value);
     } else {
       Perl_croak( aTHX_ "Unsupported SvType for hash value: %d", SvTYPE(value) );
     }
   }
-  table->num_entries = i;
-  table->entries = entries;
-dump_table( *table );
 }
 
 MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
@@ -389,7 +392,7 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
       int_from_hv(options, auto_delete);
     }
     if(args)
-      hash_to_amqp_table(args, &arguments);
+      hash_to_amqp_table(conn, args, &arguments);
     amqp_queue_declare_ok_t *r = amqp_queue_declare(conn, channel, queuename_b, passive,
                                                     durable, exclusive, auto_delete,
                                                     arguments);
@@ -416,7 +419,7 @@ net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = N
     if(bindingkey == NULL && args == NULL)
       Perl_croak(aTHX_ "bindingkey or args must be specified");
     if(args)
-      hash_to_amqp_table(args, &arguments);
+      hash_to_amqp_table(conn, args, &arguments);
     amqp_queue_bind(conn, channel, amqp_cstring_bytes(queuename),
                     amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
@@ -439,7 +442,7 @@ net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args =
     if(bindingkey == NULL && args == NULL)
       Perl_croak(aTHX_ "bindingkey or args must be specified");
     if(args)
-      hash_to_amqp_table(args, &arguments);
+      hash_to_amqp_table(conn, args, &arguments);
     amqp_queue_unbind(conn, channel, amqp_cstring_bytes(queuename),
                       amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
@@ -607,8 +610,7 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
         properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
       }
       if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
-        hash_to_amqp_table((HV *)SvRV(*v), &properties.headers);
-dump_table( properties.headers );
+        hash_to_amqp_table(conn, (HV *)SvRV(*v), &properties.headers);
         properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
     }
