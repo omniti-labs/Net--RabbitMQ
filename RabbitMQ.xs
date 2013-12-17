@@ -225,13 +225,14 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
   return result;
 }
 
-void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *table) {
+void hash_to_amqp_table(HV *hash, amqp_table_t *table) {
   HE   *he;
   char *key;
   SV   *value;
   I32  retlen;
+  int i = 0;
 
-  amqp_create_table(conn, table, HvKEYS(hash));
+  amqp_table_entry_t entries[HvKEYS(hash)];
 
   hv_iterinit(hash);
   while (NULL != (he = hv_iternext(hash))) {
@@ -242,13 +243,22 @@ void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *ta
       mg_get(value);
 
     if (SvPOK(value)) {
-      amqp_table_add_string(conn, table, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
+      entries[ i ].key = amqp_cstring_bytes(key);
+      entries[ i ].value.kind = AMQP_FIELD_KIND_UTF8;
+      entries[ i ].value.value.bytes = amqp_cstring_bytes(SvPV_nolen(value));
+      ++i;
     } else if (SvIOK(value)) {
-      amqp_table_add_int(conn, table, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
+      entries[ i ].key = amqp_cstring_bytes(key);
+      entries[ i ].value.kind = AMQP_FIELD_KIND_I32;
+      entries[ i ].value.value.i32 = (uint64_t) SvIV(value);
+      ++i;
     } else {
       Perl_croak( aTHX_ "Unsupported SvType for hash value: %d", SvTYPE(value) );
     }
   }
+  table->num_entries = 8;
+  table->entries = entries;
+  dump_table( table );
 }
 
 MODULE = Net::RabbitMQ PACKAGE = Net::RabbitMQ PREFIX = net_rabbitmq_
@@ -330,7 +340,7 @@ net_rabbitmq_exchange_declare(conn, channel, exchange, options = NULL, args = NU
     char *exchange_type = "direct";
     int passive = 0;
     int durable = 0;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+    amqp_table_t arguments = amqp_empty_table;
   CODE:
     if(options) {
       str_from_hv(options, exchange_type);
@@ -368,8 +378,8 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
     int durable = 0;
     int exclusive = 0;
     int auto_delete = 1;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
-    amqp_bytes_t queuename_b = AMQP_EMPTY_BYTES;
+    amqp_table_t arguments = amqp_empty_table;
+    amqp_bytes_t queuename_b = amqp_empty_bytes;
   PPCODE:
     if(queuename && strcmp(queuename, "")) queuename_b = amqp_cstring_bytes(queuename);
     if(options) {
@@ -379,7 +389,7 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
       int_from_hv(options, auto_delete);
     }
     if(args)
-      hash_to_amqp_table(conn, args, &arguments);
+      hash_to_amqp_table(args, &arguments);
     amqp_queue_declare_ok_t *r = amqp_queue_declare(conn, channel, queuename_b, passive,
                                                     durable, exclusive, auto_delete,
                                                     arguments);
@@ -399,14 +409,14 @@ net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = N
   char *bindingkey
   HV *args
   PREINIT:
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+    amqp_table_t arguments = amqp_empty_table;
   CODE:
     if(queuename == NULL || exchange == NULL)
       Perl_croak(aTHX_ "queuename and exchange must both be specified");
     if(bindingkey == NULL && args == NULL)
       Perl_croak(aTHX_ "bindingkey or args must be specified");
     if(args)
-      hash_to_amqp_table(conn, args, &arguments);
+      hash_to_amqp_table(args, &arguments);
     amqp_queue_bind(conn, channel, amqp_cstring_bytes(queuename),
                     amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
@@ -422,14 +432,14 @@ net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args =
   char *bindingkey
   HV *args
   PREINIT:
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+    amqp_table_t arguments = amqp_empty_table;
   CODE:
     if(queuename == NULL || exchange == NULL)
       Perl_croak(aTHX_ "queuename and exchange must both be specified");
     if(bindingkey == NULL && args == NULL)
       Perl_croak(aTHX_ "bindingkey or args must be specified");
     if(args)
-      hash_to_amqp_table(conn, args, &arguments);
+      hash_to_amqp_table(args, &arguments);
     amqp_queue_unbind(conn, channel, amqp_cstring_bytes(queuename),
                       amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
@@ -456,7 +466,7 @@ net_rabbitmq_consume(conn, channel, queuename, options = NULL)
       int_from_hv(options, exclusive);
     }
     r = amqp_basic_consume(conn, channel, amqp_cstring_bytes(queuename),
-                           consumer_tag ? amqp_cstring_bytes(consumer_tag) : AMQP_EMPTY_BYTES,
+                           consumer_tag ? amqp_cstring_bytes(consumer_tag) : amqp_empty_bytes,
                            no_local, no_ack, exclusive, amqp_empty_table);
     die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Consume queue");
     RETVAL = newSVpvn(r->consumer_tag.bytes, r->consumer_tag.len);
@@ -545,7 +555,7 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
       if(NULL != (v = hv_fetch(options, "immediate", strlen("immediate"), 0))) immediate = SvIV(*v) ? 1 : 0;
       if(NULL != (v = hv_fetch(options, "exchange", strlen("exchange"), 0))) exchange_b = amqp_cstring_bytes(SvPV_nolen(*v));
     }
-    properties.headers = AMQP_EMPTY_TABLE;
+    properties.headers = amqp_empty_table;
     properties._flags = 0;
     if (props) {
       if (NULL != (v = hv_fetch(props, "content_type", strlen("content_type"), 0))) {
@@ -597,7 +607,7 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
         properties._flags |= AMQP_BASIC_TIMESTAMP_FLAG;
       }
       if (NULL != (v = hv_fetch(props, "headers", strlen("headers"), 0))) {
-        hash_to_amqp_table(conn, (HV *)SvRV(*v), &properties.headers);
+        hash_to_amqp_table((HV *)SvRV(*v), &properties.headers);
         properties._flags |= AMQP_BASIC_HEADERS_FLAG;
       }
     }
@@ -619,7 +629,7 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
     if(options)
       int_from_hv(options, no_ack);
     amqp_maybe_release_buffers(conn);
-    r = amqp_basic_get(conn, channel, queuename ? amqp_cstring_bytes(queuename) : AMQP_EMPTY_BYTES, no_ack);
+    r = amqp_basic_get(conn, channel, queuename ? amqp_cstring_bytes(queuename) : amqp_empty_bytes, no_ack);
     die_on_amqp_error(aTHX_ r, "basic_get");
     if(r.reply.id == AMQP_BASIC_GET_OK_METHOD) {
       HV *hv;
