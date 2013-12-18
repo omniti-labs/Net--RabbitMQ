@@ -302,7 +302,7 @@ net_rabbitmq_connect(conn, hostname, options)
     sock = amqp_tcp_socket_new(conn);
 
     if (!sock) {
-      Perl_croak("error creating TCP socket");
+      Perl_croak(aTHX_ "error creating TCP socket");
     }
 
     die_on_error(aTHX_ amqp_socket_open_noblock(sock, hostname, port, (timeout<0)?NULL:&to), "opening TCP socket");
