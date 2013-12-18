@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 8;
 use strict;
 
 my $host = $ENV{'MQHOST'} || "dev.rabbitmq.com";
@@ -10,11 +10,6 @@ ok($mq);
 my $result = $mq->connect($host, {"user" => "guest", "password" => "guest"});
 ok($result, 'connect');
 eval { $mq->channel_open(1); };
-$mq->basic_return(sub {
-  my ($channel, $m) = @_;
-  is($channel, 1, 'basic return channel');
-  is($m->{reply_text}, 'NO_CONSUMERS', 'basic return reply');
-});
 
 is($@, '', 'channel_open');
 $result = eval { $mq->publish(1, "nr_test_route", "Magic Payload",

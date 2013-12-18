@@ -17,15 +17,9 @@ diag "Sleeping for 5 seconds";
 sleep(5);
 eval { $mq->heartbeat(); };
 is($@, '', "heartbeat");
-$mq->basic_return(sub {
-  my ($channel, $m) = @_;
-  diag Dumper(\@_);
-});
 my $rv = 0;
 eval { $rv = $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr_test_x", "immediate" => 1, "mandatory" => 1 }); };
 diag "Sleeping for 1 seconds";
 sleep(1);
 eval { $rv = $mq->publish(1, "nr_test_q", "Magic Transient Payload", { exchange => "nr_test_x", "immediate" => 1, "mandatory" => 1 }); };
-is($rv, -1, "publish");
-
-1;
+is($rv, -9, "publish");
