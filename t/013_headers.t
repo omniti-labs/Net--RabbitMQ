@@ -88,16 +88,16 @@ is_deeply( $msg->{props}{headers}, $headers, "Received blessed headers" );
 
 
 SKIP: {
-	skip "Variable::Magic not available", 3
-		unless eval "use Variable::Magic qw(wizard cast); 1";
+  skip "overload not supported on this perl", 3
+    unless eval <<'PERL';
+package ItsAKindaMagic;
+use overload '""' => sub { "one prize, one goal" };
+sub new { return bless {}, shift }
+package main;
+1;
+PERL
 
-	my $wizard = wizard(
-		set => sub { },
-	);
-	my $magic = 'foo';
-	cast($magic, $wizard);
-	my $headers = { blah => $magic, };
-
+  my $headers = { blah => ItsAKindaMagic->new() };
 	eval { $mq->publish( 1, "nr_test_route", "Header Test",
 			{ exchange => "nr_test_x" },
 			{ headers => $headers },
