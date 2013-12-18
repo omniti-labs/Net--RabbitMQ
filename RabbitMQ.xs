@@ -3,7 +3,6 @@
 #include "XSUB.h"
 
 #include <amqp.h>
-#include <amqp_private.h>
 #include <amqp_tcp_socket.h>
 
 typedef amqp_connection_state_t Net__RabbitMQ;
@@ -20,6 +19,8 @@ void die_on_error(pTHX_ int x, char const *context) {
     Perl_croak(aTHX_ "%s: %s\n", context, strerror(-x));
   }
 }
+
+amqp_pool_t hash_pool;
 
 void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
   switch (x.reply_type) {
@@ -233,7 +234,7 @@ void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *ta
   I32  retlen;
   amqp_table_entry_t *entry;
 
-  amqp_table_entry_t *new_entries = amqp_pool_alloc( &conn->properties_pool, HvKEYS(hash) * sizeof(amqp_table_entry_t) );
+  amqp_table_entry_t *new_entries = amqp_pool_alloc( &hash_pool, HvKEYS(hash) * sizeof(amqp_table_entry_t) );
   table->entries = new_entries;
 
   hv_iterinit(hash);
@@ -308,6 +309,8 @@ net_rabbitmq_connect(conn, hostname, options)
     die_on_error(aTHX_ amqp_socket_open_noblock(sock, hostname, port, (timeout<0)?NULL:&to), "opening TCP socket");
 
     die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max, heartbeat, AMQP_SASL_METHOD_PLAIN, user, password), "Logging in");
+    empty_amqp_pool( &hash_pool );
+    init_amqp_pool( &hash_pool, 512 );
 
     RETVAL = 1;
   OUTPUT:
@@ -674,6 +677,7 @@ net_rabbitmq_disconnect(conn)
     int sockfd;
   CODE:
     amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
+    empty_amqp_pool( &hash_pool );
 
 Net::RabbitMQ
 net_rabbitmq_new(clazz)
@@ -689,6 +693,7 @@ net_rabbitmq_DESTROY(conn)
   PREINIT:
     int sockfd;
   CODE:
+    empty_amqp_pool( &hash_pool );
     amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
     amqp_destroy_connection(conn);
 
