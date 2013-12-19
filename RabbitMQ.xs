@@ -504,7 +504,7 @@ net_rabbitmq_purge(conn, channel, queuename)
     amqp_queue_purge(conn, channel, amqp_cstring_bytes(queuename));
     die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Purging queue");
 
-int
+void
 net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = NULL)
   Net::RabbitMQ conn
   int channel
@@ -589,9 +589,9 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
       }
     }
     rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b, mandatory, immediate, &properties, body_b);
-    RETVAL = rv;
-  OUTPUT:
-    RETVAL
+    if ( rv != AMQP_STATUS_OK ) {
+        Perl_croak( aTHX_ "Publish failed, error code %d", rv);
+    }
 
 SV *
 net_rabbitmq_get(conn, channel, queuename, options = NULL)
