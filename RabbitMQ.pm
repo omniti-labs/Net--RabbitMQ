@@ -4,7 +4,7 @@ require DynaLoader;
 
 use strict;
 use vars qw($VERSION @ISA);
-$VERSION = "0.2.6";
+$VERSION = "0.3.0";
 @ISA = qw/DynaLoader/;
 
 bootstrap Net::RabbitMQ $VERSION ;
@@ -22,7 +22,14 @@ Net::RabbitMQ - interact with RabbitMQ over AMQP using librabbitmq
 	$mq->channel_open(1);
 	$mq->publish(1, "queuename", "Hi there!");
 	$mq->disconnect();
-	
+
+=head1 VERSION COMPATIBILITY
+
+As of version 0.3.0, Net::RabbitMQ uses the AMQP 0.9.1 protocol. This means it
+will not work with RabbitMQ versions below 2.0.0
+
+See L<https://www.rabbitmq.com/specification.html>
+
 =head1 DESCRIPTION
 
 C<Net::RabbitMQ> provides a simple wrapper around the librabbitmq library
@@ -323,17 +330,6 @@ Send a hearbeat frame.  If you've connected with a heartbeat parameter,
 you must send a heartbeat periodically matching connection parameter or
 the server may snip the connection.
 
-=item basic_return($subroutine)
-
-C<$subroutine> is a perl coderef that takes two arguments:
-
-     $channel is the channel on which the message is returned.
-
-     $m the message which is a hash ref containing reply_code,
-     reply_text, exchange, and routing_key.
-
-=back
-
 =cut
 
 sub publish {
@@ -351,6 +347,10 @@ sub publish {
 	}
 
 	$self->_publish($channel, $routing_key, $body, $options, $props);
+}
+
+sub basic_return {
+    die "This method has been removed in version 0.3.0";
 }
 
 1;
