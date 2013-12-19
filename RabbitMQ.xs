@@ -78,6 +78,14 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
       amqp_maybe_release_buffers(conn);
       result = amqp_simple_wait_frame(conn, &frame);
       if (result != AMQP_STATUS_OK) break;
+      if (frame.frame_type == AMQP_FRAME_HEARTBEAT) {
+        // Well, let's send the heartbeat frame back, shouldn't we?
+        amqp_frame_t hb_resp;
+        hb_resp.frame_type = AMQP_FRAME_HEARTBEAT;
+        hb_resp.channel = 0;
+        amqp_send_frame(conn, &hb_resp);
+        continue;
+      }
       if (frame.frame_type != AMQP_FRAME_METHOD) continue;
       if (frame.payload.method.id != AMQP_BASIC_DELIVER_METHOD) continue;
       d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
@@ -89,7 +97,13 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     }
 
     result = amqp_simple_wait_frame(conn, &frame);
-    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
+    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) {
+      amqp_frame_t hb_resp;
+      hb_resp.frame_type = AMQP_FRAME_HEARTBEAT;
+      hb_resp.channel = 0;
+      amqp_send_frame(conn, &hb_resp);
+      continue;
+    }
     if (result != AMQP_STATUS_OK) break;
 
     if (frame.frame_type != AMQP_FRAME_HEADER)
