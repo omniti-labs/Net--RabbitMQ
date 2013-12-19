@@ -6,6 +6,7 @@
 ^Makefile$
 ^blib/
 ^MakeMaker-\d
+.*\.bak
 
 # Temp, old and emacs backup files.
 ~$
@@ -15,5 +16,11 @@
 \..+?\.swp$
 
 ^rabbitmq-c
-/RabbitMQ.c
-/pm_to_blib
+RabbitMQ\.c
+pm_to_blib
+amqp_debug.c
+.*\.o
+.*\.tar\.gz
+.*\.bs
+MYMETA.*
+README
