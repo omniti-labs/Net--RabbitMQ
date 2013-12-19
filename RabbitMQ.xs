@@ -2,8 +2,8 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include "amqp.h"
-#include "amqp_framing.h"
+#include <amqp.h>
+#include <amqp_tcp_socket.h>
 
 typedef amqp_connection_state_t Net__RabbitMQ;
 
@@ -20,6 +20,8 @@ void die_on_error(pTHX_ int x, char const *context) {
   }
 }
 
+amqp_pool_t hash_pool;
+
 void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
   switch (x.reply_type) {
     case AMQP_RESPONSE_NORMAL:
@@ -31,7 +33,7 @@ void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
 
     case AMQP_RESPONSE_LIBRARY_EXCEPTION:
       Perl_croak(aTHX_ "%s: %s\n", context,
-              x.library_errno ? strerror(x.library_errno) : "(end-of-stream)");
+              x.library_error ? strerror(x.library_error) : "(end-of-stream)");
       break;
 
     case AMQP_RESPONSE_SERVER_EXCEPTION:
@@ -60,31 +62,6 @@ void die_on_amqp_error(pTHX_ amqp_rpc_reply_t x, char const *context) {
   }
 }
 
-static void
-internal_brcb(amqp_channel_t channel, amqp_basic_return_t *m, void *vsv) {
-  HV *mp;
-  SV *sv = (SV *)vsv;
-  dSP;
-  ENTER;
-  SAVETMPS;
-  PUSHMARK(SP);
-  XPUSHs(sv_2mortal(newSViv(channel)));
-  mp = newHV();
-  hv_store(mp, "reply_code", strlen("reply_code"), newSViv(m->reply_code), 0);
-  hv_store(mp, "reply_text", strlen("reply_text"),
-           newSVpvn(m->reply_text.bytes, m->reply_text.len), 0);
-  hv_store(mp, "exchange", strlen("exchange"),
-           newSVpvn(m->exchange.bytes, m->exchange.len), 0);
-  hv_store(mp, "routing_key", strlen("routing_key"),
-           newSVpvn(m->routing_key.bytes, m->routing_key.len), 0);
-  XPUSHs(sv_2mortal((SV *)newRV((SV *)mp)));
-  PUTBACK;
-  call_sv(sv, G_DISCARD);
-  SPAGAIN;
-  PUTBACK;
-  FREETMPS;
-  LEAVE;
-}
 int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
   amqp_frame_t frame;
   amqp_basic_deliver_t *d;
@@ -100,7 +77,15 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     if(!piggyback) {
       amqp_maybe_release_buffers(conn);
       result = amqp_simple_wait_frame(conn, &frame);
-      if (result <= 0) break;
+      if (result != AMQP_STATUS_OK) break;
+      if (frame.frame_type == AMQP_FRAME_HEARTBEAT) {
+        // Well, let's send the heartbeat frame back, shouldn't we?
+        amqp_frame_t hb_resp;
+        hb_resp.frame_type = AMQP_FRAME_HEARTBEAT;
+        hb_resp.channel = 0;
+        amqp_send_frame(conn, &hb_resp);
+        continue;
+      }
       if (frame.frame_type != AMQP_FRAME_METHOD) continue;
       if (frame.payload.method.id != AMQP_BASIC_DELIVER_METHOD) continue;
       d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
@@ -112,8 +97,14 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     }
 
     result = amqp_simple_wait_frame(conn, &frame);
-    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
-    if (result <= 0) break;
+    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) {
+      amqp_frame_t hb_resp;
+      hb_resp.frame_type = AMQP_FRAME_HEARTBEAT;
+      hb_resp.channel = 0;
+      amqp_send_frame(conn, &hb_resp);
+      continue;
+    }
+    if (result != AMQP_STATUS_OK) break;
 
     if (frame.frame_type != AMQP_FRAME_HEADER)
       Perl_croak(aTHX_ "Unexpected header %d!", frame.frame_type);
@@ -179,17 +170,17 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
       hv_store( props, "headers", strlen("headers"), newRV_noinc((SV *)headers), 0 );
 
       for( i=0; i < p->headers.num_entries; ++i ) {
-        if( p->headers.entries[i].kind == 'I' ) {
+        if( p->headers.entries[i].value.kind == AMQP_FIELD_KIND_I32 ) {
           hv_store( headers,
               p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
-              newSViv(p->headers.entries[i].value.i32),
+              newSViv(p->headers.entries[i].value.value.i32),
               0
           );
         }
-        else if( p->headers.entries[i].kind == 'S' ) {
+        else if( p->headers.entries[i].value.kind == AMQP_FIELD_KIND_UTF8 ) {
           hv_store( headers,
               p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
-              newSVpvn( p->headers.entries[i].value.bytes.bytes, p->headers.entries[i].value.bytes.len),
+              newSVpvn( p->headers.entries[i].value.value.bytes.bytes, p->headers.entries[i].value.value.bytes.len),
               0
           );
         }
@@ -202,7 +193,7 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
 
     while (body_received < body_target) {
       result = amqp_simple_wait_frame(conn, &frame);
-      if (result <= 0) break;
+      if (result != AMQP_STATUS_OK) break;
 
       if (frame.frame_type != AMQP_FRAME_BODY) {
         Perl_croak(aTHX_ "Expected fram body, got %d!", frame.frame_type);
@@ -230,8 +221,10 @@ void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *ta
   char *key;
   SV   *value;
   I32  retlen;
+  amqp_table_entry_t *entry;
 
-  amqp_create_table(conn, table, HvKEYS(hash));
+  amqp_table_entry_t *new_entries = amqp_pool_alloc( &hash_pool, HvKEYS(hash) * sizeof(amqp_table_entry_t) );
+  table->entries = new_entries;
 
   hv_iterinit(hash);
   while (NULL != (he = hv_iternext(hash))) {
@@ -241,10 +234,21 @@ void hash_to_amqp_table(amqp_connection_state_t conn, HV *hash, amqp_table_t *ta
     if (SvGMAGICAL(value))
       mg_get(value);
 
+
     if (SvPOK(value)) {
-      amqp_table_add_string(conn, table, amqp_cstring_bytes(key), amqp_cstring_bytes(SvPV_nolen(value)));
+      entry = &table->entries[table->num_entries];
+      table->num_entries++;
+
+      entry->key = amqp_cstring_bytes(key);
+      entry->value.kind = AMQP_FIELD_KIND_UTF8;
+      entry->value.value.bytes = amqp_cstring_bytes(SvPV_nolen(value));
     } else if (SvIOK(value)) {
-      amqp_table_add_int(conn, table, amqp_cstring_bytes(key), (uint64_t) SvIV(value));
+      entry = &table->entries[table->num_entries];
+      table->num_entries++;
+
+      entry->key = amqp_cstring_bytes(key);
+      entry->value.kind = AMQP_FIELD_KIND_I32;
+      entry->value.value.i32 = (uint64_t) SvIV(value);
     } else {
       Perl_croak( aTHX_ "Unsupported SvType for hash value: %d", SvTYPE(value) );
     }
@@ -262,7 +266,7 @@ net_rabbitmq_connect(conn, hostname, options)
   char *hostname
   HV *options
   PREINIT:
-    int sockfd;
+    amqp_socket_t *sock;
     char *user = "guest";
     char *password = "guest";
     char *vhost = "/";
@@ -285,35 +289,29 @@ net_rabbitmq_connect(conn, hostname, options)
      to.tv_sec = floor(timeout);
      to.tv_usec = 1000000.0 * (timeout - floor(timeout));
     }
+    sock = amqp_tcp_socket_new(conn);
 
-    die_on_error(aTHX_ sockfd = amqp_open_socket(hostname, port, (timeout<0)?NULL:&to), "Opening socket");
-    amqp_set_sockfd(conn, sockfd);
-    die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max,
-                                       heartbeat, AMQP_SASL_METHOD_PLAIN,
-                                       user, password),
-                      "Logging in");
-    RETVAL = sockfd;
+    if (!sock) {
+      Perl_croak(aTHX_ "error creating TCP socket");
+    }
+
+    die_on_error(aTHX_ amqp_socket_open_noblock(sock, hostname, port, (timeout<0)?NULL:&to), "opening TCP socket");
+
+    die_on_amqp_error(aTHX_ amqp_login(conn, vhost, channel_max, frame_max, heartbeat, AMQP_SASL_METHOD_PLAIN, user, password), "Logging in");
+    empty_amqp_pool( &hash_pool );
+    init_amqp_pool( &hash_pool, 512 );
+
+    RETVAL = 1;
   OUTPUT:
     RETVAL
-
-void
-net_rabbitmq_basic_return(conn, code)
-  Net::RabbitMQ conn
-  SV *code
-  CODE:
-    SvREFCNT_inc(code);
-    amqp_set_basic_return_cb(conn, internal_brcb, code);
 
 void
 net_rabbitmq_channel_open(conn, channel)
   Net::RabbitMQ conn
   int channel
-  PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
   CODE:
     amqp_channel_open(conn, channel);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Opening channel");
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Opening channel");
 
 void
 net_rabbitmq_channel_close(conn, channel)
@@ -330,23 +328,19 @@ net_rabbitmq_exchange_declare(conn, channel, exchange, options = NULL, args = NU
   HV *options
   HV *args
   PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
     char *exchange_type = "direct";
     int passive = 0;
     int durable = 0;
-    int auto_delete = 1;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+    amqp_table_t arguments = amqp_empty_table;
   CODE:
     if(options) {
       str_from_hv(options, exchange_type);
       int_from_hv(options, passive);
       int_from_hv(options, durable);
-      int_from_hv(options, auto_delete);
     }
     amqp_exchange_declare(conn, channel, amqp_cstring_bytes(exchange), amqp_cstring_bytes(exchange_type),
-                          passive, durable, auto_delete, arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Declaring exchange");
+                          passive, durable, arguments);
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Declaring exchange");
 
 void
 net_rabbitmq_exchange_delete(conn, channel, exchange, options = NULL)
@@ -355,17 +349,13 @@ net_rabbitmq_exchange_delete(conn, channel, exchange, options = NULL)
   char *exchange
   HV *options
   PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
     int if_unused = 1;
-    int nowait = 0;
   CODE:
     if(options) {
       int_from_hv(options, if_unused);
-      int_from_hv(options, nowait);
     }
-    amqp_exchange_delete(conn, channel, amqp_cstring_bytes(exchange), if_unused, nowait);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Deleting exchange");
+    amqp_exchange_delete(conn, channel, amqp_cstring_bytes(exchange), if_unused);
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Deleting exchange");
 
 void
 net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL)
@@ -375,13 +365,12 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
   HV *options
   HV *args
   PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
     int passive = 0;
     int durable = 0;
     int exclusive = 0;
     int auto_delete = 1;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
-    amqp_bytes_t queuename_b = AMQP_EMPTY_BYTES;
+    amqp_table_t arguments = amqp_empty_table;
+    amqp_bytes_t queuename_b = amqp_empty_bytes;
   PPCODE:
     if(queuename && strcmp(queuename, "")) queuename_b = amqp_cstring_bytes(queuename);
     if(options) {
@@ -395,8 +384,7 @@ net_rabbitmq_queue_declare(conn, channel, queuename, options = NULL, args = NULL
     amqp_queue_declare_ok_t *r = amqp_queue_declare(conn, channel, queuename_b, passive,
                                                     durable, exclusive, auto_delete,
                                                     arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Declaring queue");
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Declaring queue");
     XPUSHs(sv_2mortal(newSVpvn(r->queue.bytes, r->queue.len)));
     if(GIMME_V == G_ARRAY) {
       XPUSHs(sv_2mortal(newSVuv(r->message_count)));
@@ -412,8 +400,7 @@ net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = N
   char *bindingkey
   HV *args
   PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+    amqp_table_t arguments = amqp_empty_table;
   CODE:
     if(queuename == NULL || exchange == NULL)
       Perl_croak(aTHX_ "queuename and exchange must both be specified");
@@ -425,8 +412,7 @@ net_rabbitmq_queue_bind(conn, channel, queuename, exchange, bindingkey, args = N
                     amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
                     arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Binding queue");
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Binding queue");
 
 void
 net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args = NULL)
@@ -437,8 +423,7 @@ net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args =
   char *bindingkey
   HV *args
   PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
+    amqp_table_t arguments = amqp_empty_table;
   CODE:
     if(queuename == NULL || exchange == NULL)
       Perl_croak(aTHX_ "queuename and exchange must both be specified");
@@ -450,8 +435,7 @@ net_rabbitmq_queue_unbind(conn, channel, queuename, exchange, bindingkey, args =
                       amqp_cstring_bytes(exchange),
                     amqp_cstring_bytes(bindingkey),
                     arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Unbinding queue");
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Unbinding queue");
 
 SV *
 net_rabbitmq_consume(conn, channel, queuename, options = NULL)
@@ -460,7 +444,6 @@ net_rabbitmq_consume(conn, channel, queuename, options = NULL)
   char *queuename
   HV *options
   PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
     amqp_basic_consume_ok_t *r;
     char *consumer_tag = NULL;
     int no_local = 0;
@@ -474,10 +457,9 @@ net_rabbitmq_consume(conn, channel, queuename, options = NULL)
       int_from_hv(options, exclusive);
     }
     r = amqp_basic_consume(conn, channel, amqp_cstring_bytes(queuename),
-                           consumer_tag ? amqp_cstring_bytes(consumer_tag) : AMQP_EMPTY_BYTES,
-                           no_local, no_ack, exclusive);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Consume queue");
+                           consumer_tag ? amqp_cstring_bytes(consumer_tag) : amqp_empty_bytes,
+                           no_local, no_ack, exclusive, amqp_empty_table);
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Consume queue");
     RETVAL = newSVpvn(r->consumer_tag.bytes, r->consumer_tag.len);
   OUTPUT:
     RETVAL
@@ -485,13 +467,9 @@ net_rabbitmq_consume(conn, channel, queuename, options = NULL)
 HV *
 net_rabbitmq_recv(conn)
   Net::RabbitMQ conn
-  PREINIT:
-    int result = 0;
   CODE:
     RETVAL = newHV();
-    sv_2mortal((SV*)RETVAL);
-    result = internal_recv(RETVAL, conn, 0);
-    if(result <= 0) Perl_croak(aTHX_ "Bad frame read.");
+    internal_recv(RETVAL, conn, 0);
   OUTPUT:
     RETVAL
 
@@ -532,19 +510,15 @@ net_rabbitmq_reject(conn, channel, delivery_tag, requeue = 0)
 
 
 void
-net_rabbitmq_purge(conn, channel, queuename, no_wait = 0)
+net_rabbitmq_purge(conn, channel, queuename)
   Net::RabbitMQ conn
   int channel
   char *queuename
-  int no_wait
-  PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
   CODE:
-    amqp_queue_purge(conn, channel, amqp_cstring_bytes(queuename), no_wait);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Purging queue");
+    amqp_queue_purge(conn, channel, amqp_cstring_bytes(queuename));
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Purging queue");
 
-int
+void
 net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = NULL)
   Net::RabbitMQ conn
   int channel
@@ -572,7 +546,7 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
       if(NULL != (v = hv_fetch(options, "immediate", strlen("immediate"), 0))) immediate = SvIV(*v) ? 1 : 0;
       if(NULL != (v = hv_fetch(options, "exchange", strlen("exchange"), 0))) exchange_b = amqp_cstring_bytes(SvPV_nolen(*v));
     }
-    properties.headers = AMQP_EMPTY_TABLE;
+    properties.headers = amqp_empty_table;
     properties._flags = 0;
     if (props) {
       if (NULL != (v = hv_fetch(props, "content_type", strlen("content_type"), 0))) {
@@ -629,9 +603,9 @@ net_rabbitmq__publish(conn, channel, routing_key, body, options = NULL, props = 
       }
     }
     rv = amqp_basic_publish(conn, channel, exchange_b, routing_key_b, mandatory, immediate, &properties, body_b);
-    RETVAL = rv;
-  OUTPUT:
-    RETVAL
+    if ( rv != AMQP_STATUS_OK ) {
+        Perl_croak( aTHX_ "Publish failed, error code %d", rv);
+    }
 
 SV *
 net_rabbitmq_get(conn, channel, queuename, options = NULL)
@@ -646,7 +620,7 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
     if(options)
       int_from_hv(options, no_ack);
     amqp_maybe_release_buffers(conn);
-    r = amqp_basic_get(conn, channel, queuename ? amqp_cstring_bytes(queuename) : AMQP_EMPTY_BYTES, no_ack);
+    r = amqp_basic_get(conn, channel, queuename ? amqp_cstring_bytes(queuename) : amqp_empty_bytes, no_ack);
     die_on_amqp_error(aTHX_ r, "basic_get");
     if(r.reply.id == AMQP_BASIC_GET_OK_METHOD) {
       HV *hv;
@@ -660,7 +634,7 @@ net_rabbitmq_get(conn, channel, queuename, options = NULL)
       if(amqp_data_in_buffer(conn)) {
         int rv;
         rv = internal_recv(hv, conn, 1);
-        if(rv <= 0) Perl_croak(aTHX_ "Bad frame read.");
+        if(rv != AMQP_STATUS_OK) Perl_croak(aTHX_ "Bad frame read.");
       }
       RETVAL = (SV *)newRV_noinc((SV *)hv);
     }
@@ -683,10 +657,8 @@ net_rabbitmq_disconnect(conn)
   PREINIT:
     int sockfd;
   CODE:
-    die_on_amqp_error(aTHX_ amqp_connection_close(conn, AMQP_REPLY_SUCCESS), "Closing connection");
-    sockfd = amqp_get_sockfd(conn);
-    if(sockfd >= 0) close(sockfd);
-    amqp_set_sockfd(conn,-1);
+    amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
+    empty_amqp_pool( &hash_pool );
 
 Net::RabbitMQ
 net_rabbitmq_new(clazz)
@@ -702,9 +674,8 @@ net_rabbitmq_DESTROY(conn)
   PREINIT:
     int sockfd;
   CODE:
+    empty_amqp_pool( &hash_pool );
     amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
-    sockfd = amqp_get_sockfd(conn);
-    if(sockfd >= 0) close(sockfd);
     amqp_destroy_connection(conn);
 
 void
@@ -722,39 +693,27 @@ net_rabbitmq_tx_select(conn, channel, args = NULL)
   Net::RabbitMQ conn
   int channel
   HV *args
-  PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
   CODE:
-    amqp_tx_select(conn, channel, arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Selecting transaction");
+    amqp_tx_select(conn, channel);
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Selecting transaction");
 
 void
 net_rabbitmq_tx_commit(conn, channel, args = NULL)
   Net::RabbitMQ conn
   int channel
   HV *args
-  PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
   CODE:
-    amqp_tx_commit(conn, channel, arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Commiting transaction");
+    amqp_tx_commit(conn, channel);
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Commiting transaction");
 
 void
 net_rabbitmq_tx_rollback(conn, channel, args = NULL)
   Net::RabbitMQ conn
   int channel
   HV *args
-  PREINIT:
-    amqp_rpc_reply_t *amqp_rpc_reply;
-    amqp_table_t arguments = AMQP_EMPTY_TABLE;
   CODE:
-    amqp_tx_rollback(conn, channel, arguments);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Rolling Back transaction");
+    amqp_tx_rollback(conn, channel);
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Rolling Back transaction");
 
 void
 net_rabbitmq_basic_qos(conn, channel, args = NULL)
@@ -763,7 +722,6 @@ net_rabbitmq_basic_qos(conn, channel, args = NULL)
   HV *args
   PREINIT:
     SV **v;
-    amqp_rpc_reply_t *amqp_rpc_reply;
     uint32_t prefetch_size = 0;
     uint16_t prefetch_count = 0;
     amqp_boolean_t global = 0;
@@ -775,5 +733,4 @@ net_rabbitmq_basic_qos(conn, channel, args = NULL)
     }
     amqp_basic_qos(conn, channel, 
                    prefetch_size, prefetch_count, global);
-    amqp_rpc_reply = amqp_get_rpc_reply();
-    die_on_amqp_error(aTHX_ *amqp_rpc_reply, "Basic QoS");
+    die_on_amqp_error(aTHX_ amqp_get_rpc_reply(conn), "Basic QoS");

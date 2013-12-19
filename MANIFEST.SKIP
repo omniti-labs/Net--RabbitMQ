@@ -1,0 +1,26 @@
+# Version control files and dirs.
+\.git
+
+# Makemaker generated files and dirs.
+^MANIFEST\.
+^Makefile$
+^blib/
+^MakeMaker-\d
+.*\.bak
+
+# Temp, old and emacs backup files.
+~$
+\.old$
+^#.*#$
+^\.#
+\..+?\.swp$
+
+^rabbitmq-c
+RabbitMQ\.c
+pm_to_blib
+amqp_debug.c
+.*\.o
+.*\.tar\.gz
+.*\.bs
+MYMETA.*
+README

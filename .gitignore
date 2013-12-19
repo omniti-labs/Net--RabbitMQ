@@ -5,3 +5,9 @@
 /tags
 *.bs
 *.o
+MYMETA.*
+MANIFEST
+*.swp
+*.old
+/RabbitMQ.c
+/Net-RabbitMQ*.tar*
