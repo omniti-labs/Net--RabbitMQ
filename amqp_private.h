@@ -74,6 +74,8 @@ struct amqp_connection_state_t_ {
 
   amqp_basic_return_fn_t basic_return_callback;
   void *basic_return_callback_data;
+
+  struct timeval last_send;
 };
 
 #define CHECK_LIMIT(b, o, l, v) ({ if ((o + l) > (b).len) { return -EFAULT; } (v); })

@@ -3,6 +3,7 @@
 #include "XSUB.h"
 
 #include "amqp.h"
+#include "amqp_private.h"
 #include "amqp_framing.h"
 
 typedef amqp_connection_state_t Net__RabbitMQ;
@@ -101,6 +102,10 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
       amqp_maybe_release_buffers(conn);
       result = amqp_simple_wait_frame(conn, &frame);
       if (result <= 0) break;
+      if (frame.frame_type == AMQP_FRAME_HEARTBEAT) {
+        hv_store(RETVAL, "frame_type", strlen("frame_type"), newSVpv((const char *)"heartbeat", 0), 0);
+        return result;
+      }
       if (frame.frame_type != AMQP_FRAME_METHOD) continue;
       if (frame.payload.method.id != AMQP_BASIC_DELIVER_METHOD) continue;
       d = (amqp_basic_deliver_t *) frame.payload.method.decoded;
@@ -112,7 +117,10 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
     }
 
     result = amqp_simple_wait_frame(conn, &frame);
-    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) continue;
+    if (frame.frame_type == AMQP_FRAME_HEARTBEAT) {
+      hv_store(RETVAL, "frame_type", strlen("frame_type"), newSVpv((const char *)"heartbeat", 0), 0);
+      return result;
+    }
     if (result <= 0) break;
 
     if (frame.frame_type != AMQP_FRAME_HEADER)
@@ -708,11 +716,30 @@ net_rabbitmq_DESTROY(conn)
     amqp_destroy_connection(conn);
 
 void
+net_rabbitmq_heartbeat1(conn)
+  Net::RabbitMQ conn
+  PREINIT:
+  amqp_frame_t f;
+  CODE:
+    f.frame_type = AMQP_FRAME_HEARTBEAT;
+    f.channel = 0;
+    amqp_send_frame(conn, &f);
+
+void
 net_rabbitmq_heartbeat(conn)
   Net::RabbitMQ conn
   PREINIT:
   amqp_frame_t f;
   CODE:
+    if(conn->last_send.tv_sec != 0) {
+      struct timeval now;
+      gettimeofday(&now, NULL);
+      long diff = now.tv_sec - conn->last_send.tv_sec;
+      diff *= 1000000;
+      diff += now.tv_usec - conn->last_send.tv_usec;
+      if(diff < 1000000 * conn->heartbeat)
+        return;
+    }
     f.frame_type = AMQP_FRAME_HEARTBEAT;
     f.channel = 0;
     amqp_send_frame(conn, &f);

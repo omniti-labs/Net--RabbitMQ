@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 #include <sys/uio.h>
+#include <sys/time.h>
 
 #include "amqp.h"
 #include "amqp_framing.h"
@@ -368,6 +369,7 @@ static int inner_send_frame(amqp_connection_state_t state,
   }
 #endif
 
+  if(state->heartbeat) gettimeofday(&state->last_send, NULL);
   return separate_body;
 }
 
