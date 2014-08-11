@@ -17,7 +17,7 @@ is($@, '', "channel_open");
 my $delete = 1;
 my $queue = "x-headers-" . rand();
 
-eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => $delete }, { "x-ha-policy" => "all" }); };
+eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => $delete }, { "x-message-ttl" => 5000 }); };
 is($@, '', "queue_declare");
 
 eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => $delete }); };
