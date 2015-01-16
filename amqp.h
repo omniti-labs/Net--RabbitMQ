@@ -43,6 +43,7 @@ typedef struct amqp_table_entry_t_ {
     amqp_decimal_t decimal;
     uint64_t u64;
     amqp_table_t table;
+    amqp_boolean_t boolean;   /**< boolean type AMQP_FIELD_KIND_BOOLEAN */
   } value;
 } amqp_table_entry_t;
 

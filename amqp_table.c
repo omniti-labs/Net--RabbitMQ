@@ -80,6 +80,10 @@ int amqp_decode_table(amqp_bytes_t encoded,
       case 'F':
 	AMQP_CHECK_RESULT(amqp_decode_table(encoded, pool, &(entry->value.table), &offset));
 	break;
+      case 't':
+	entry->value.boolean = D_8(encoded, offset);
+	offset += 1;
+	break;
       default:
 	return -EINVAL;
     }

@@ -201,6 +201,16 @@ int internal_recv(HV *RETVAL, amqp_connection_state_t conn, int piggyback) {
               0
           );
         }
+        else if( p->headers.entries[i].kind == 't' ) {
+          hv_store( headers,
+              p->headers.entries[i].key.bytes, p->headers.entries[i].key.len,
+              newSViv(p->headers.entries[i].value.boolean),
+              0
+          );
+        }
+	else {
+	    Perl_croak(aTHX_ "Unhandled AMQP type '%c'", p->headers.entries[i].kind == 't');
+	}
       }
     }
 
