@@ -1,5 +1,6 @@
 use Test::More tests => 20;
 use strict;
+use Variable::Magic qw(wizard cast);
 
 package TestBlessings;
 use overload
@@ -87,27 +88,24 @@ is_deeply( $msg->{props}{headers}, $headers, "Received blessed headers" );
 
 
 
-SKIP: {
-	skip "Variable::Magic not available", 3
-		unless eval "use Variable::Magic qw(wizard cast); 1";
+my $wizard = wizard(
+	set => sub { },
+);
+my $magic = 'foo';
+cast($magic, $wizard);
+$headers = { blah => $magic, };
 
-	my $wizard = wizard(
-		set => sub { },
+eval { $mq->publish( 1, "nr_test_route", "Header Test",
+		{ exchange => "nr_test_x" },
+		{ headers => $headers },
 	);
-	my $magic = 'foo';
-	cast($magic, $wizard);
-	my $headers = { blah => $magic, };
+};
+is( $@, '', 'publish with magic header values' );
 
-	eval { $mq->publish( 1, "nr_test_route", "Header Test",
-			{ exchange => "nr_test_x" },
-			{ headers => $headers },
-		);
-	};
-	is( $@, '', 'publish with magic header values' );
-
+SKIP: {
 	skip "Publish failed", 2 if $@;
 	eval { $msg = $mq->recv() };
 	is( $@, '', 'recv from magic header values' );
 
 	is_deeply( $msg->{props}{headers}, $headers, "Received magic headers" );
-};
+}

@@ -17,8 +17,8 @@ is($@, '', "channel_open");
 my $delete = 1;
 my $queue = "x-headers-" . rand();
 
-eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => $delete }, { "x-ha-policy" => "all" }); };
+eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => $delete }); };
 is($@, '', "queue_declare");
 
-eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => $delete }); };
-like( $@, qr/PRECONDITION_FAILED/, "Redeclaring queue without header arguments fails." );
+eval { $queue = $mq->queue_declare(1, $queue, { auto_delete => !$delete }); };
+like( $@, qr/PRECONDITION_FAILED/, "Redeclaring queue without header arguments fails: $@" );
