@@ -1,3 +1,6 @@
+0.2.8 -
+  * support decoding of boolean headers. (Slaven Rezic)
+
 0.2.7 -
 	* make recv return heartbeats so that a single-threaded client can
     heartbeat back.  Make heartbeat rate limit to the set heartbeat
