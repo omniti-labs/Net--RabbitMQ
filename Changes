@@ -1,3 +1,6 @@
+0.2.9 -
+  * Changes to expiration incorporated. (fgabolde)
+
 0.2.8 -
   * support decoding of boolean headers. (Slaven Rezic)
 

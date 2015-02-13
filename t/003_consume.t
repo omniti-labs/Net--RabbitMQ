@@ -8,7 +8,7 @@ use_ok('Net::RabbitMQ');
 
 my $mq = Net::RabbitMQ->new();
 ok($mq);
-
+my $exp = time + 60;
 eval { $mq->connect($host, { user => "guest", password => "guest" }); };
 is($@, '', "connect");
 eval { $mq->channel_open(1); };
@@ -32,7 +32,7 @@ is_deeply($rv,
                 content_encoding => 'none',
                 correlation_id => '123',
                 reply_to => 'somequeue',
-                expiration => 'later',
+                expiration => $exp,
                 message_id => 'ABC',
                 type => 'notmytype',
                 user_id => 'guest',
