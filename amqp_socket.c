@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
 
 #include "amqp.h"
 #include "amqp_framing.h"
@@ -83,6 +84,32 @@ good:
   return sockfd;
 }
 
+/*
+   Using write_ignore_pipe_signal() instead of write() fixes:
+
+   Bug #79411 for Net--RabbitMQ: Connect with invalid password exits
+   https://rt.cpan.org/Public/Bug/Display.html?id=79411
+
+   Description: If a write is performed on a closed socket, a SIGPIPE signal is
+   sent to the writing process. If that signal isn't caught, the process will
+   exit() as described in in these two posts:
+
+   language agnostic - Why is writing a closed TCP socket worse than reading
+   one? - Stack Overflow
+   http://stackoverflow.com/questions/2216374/why-is-writing-a-closed-tcp-socket-worse-than-reading-one/2218360#2218360
+
+   error handling - Why writing writing to unconnected socket sends SIGPIPE
+   first? - Stack Overflow
+   http://stackoverflow.com/questions/1583871/why-writing-writing-to-unconnected-socket-sends-sigpipe-first
+
+*/
+ssize_t write_ignore_pipe_signal(int fd, const void *buf, size_t count) {
+    sighandler_t old_handler = signal(SIGPIPE, SIG_IGN);
+    ssize_t written = write(fd, buf, count);
+    signal(SIGPIPE, old_handler);
+    return written;
+}
+
 static char *header() {
   static char header[8];
   header[0] = 'A';
@@ -97,7 +124,7 @@ static char *header() {
 }
 
 int amqp_send_header(amqp_connection_state_t state) {
-  return write(state->sockfd, header(), 8);
+  return write_ignore_pipe_signal(state->sockfd, header(), 8);
 }
 
 int amqp_send_header_to(amqp_connection_state_t state,

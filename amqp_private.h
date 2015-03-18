@@ -134,6 +134,11 @@ extern int amqp_encode_table(amqp_bytes_t encoded,
     _result;					\
   })
 
+/* Writing to pipes normally causes SIGPIPE if the other end has closed.
+   This one doesn't. See more documentation in the implementation in
+   amqp_socket.c */
+ssize_t write_ignore_pipe_signal(int fd, const void *buf, size_t count);
+
 #ifndef NDEBUG
 extern void amqp_dump(void const *buffer, size_t len);
 #else

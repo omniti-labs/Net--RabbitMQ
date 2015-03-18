@@ -383,18 +383,18 @@ int amqp_send_frame(amqp_connection_state_t state,
   separate_body = inner_send_frame(state, frame, &encoded, &payload_len);
   switch (separate_body) {
     case 0:
-      AMQP_CHECK_RESULT(write(state->sockfd,
-			      state->outbound_buffer.bytes,
-			      payload_len + (HEADER_SIZE + FOOTER_SIZE)));
+      AMQP_CHECK_RESULT(write_ignore_pipe_signal(state->sockfd,
+			                         state->outbound_buffer.bytes,
+			                         payload_len + (HEADER_SIZE + FOOTER_SIZE)));
       return 0;
 
     case 1:
-      AMQP_CHECK_RESULT(write(state->sockfd, state->outbound_buffer.bytes, HEADER_SIZE));
-      AMQP_CHECK_RESULT(write(state->sockfd, encoded.bytes, payload_len));
+      AMQP_CHECK_RESULT(write_ignore_pipe_signal(state->sockfd, state->outbound_buffer.bytes, HEADER_SIZE));
+      AMQP_CHECK_RESULT(write_ignore_pipe_signal(state->sockfd, encoded.bytes, payload_len));
       {
 	unsigned char frame_end_byte = AMQP_FRAME_END;
 	assert(FOOTER_SIZE == 1);
-	AMQP_CHECK_RESULT(write(state->sockfd, &frame_end_byte, FOOTER_SIZE));
+	AMQP_CHECK_RESULT(write_ignore_pipe_signal(state->sockfd, &frame_end_byte, FOOTER_SIZE));
       }
       return 0;
 
