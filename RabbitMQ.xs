@@ -291,6 +291,16 @@ net_rabbitmq_connect(conn, hostname, options)
     double timeout = -1;
     struct timeval to;
   CODE:
+
+    #ifndef _WIN32
+      struct sigaction act;
+      int r;
+      memset(&act, 0, sizeof(act));
+      act.sa_handler = SIG_IGN;
+      act.sa_flags = SA_RESTART;
+      r = sigaction(SIGPIPE, &act, NULL);
+    #endif
+
     str_from_hv(options, user);
     str_from_hv(options, password);
     str_from_hv(options, vhost);
